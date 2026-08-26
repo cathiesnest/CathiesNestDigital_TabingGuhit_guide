@@ -48,7 +48,7 @@ const CONFIG = {
     Exchange-rate conversion remains disabled until a real
     exchange-rate source is connected.
   */
-  EXCHANGE_RATES_ENABLED: false
+  EXCHANGE_RATES_ENABLED: true
 };
 
 
