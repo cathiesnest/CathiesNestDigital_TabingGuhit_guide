@@ -29,14 +29,14 @@ const CONFIG = {
     "https://alison.com/?utm_source=alison_user&utm_medium=affiliate&utm_campaign=42404117",
 
   /*
-    AI is intentionally not connected to an external AI service.
-    No private API key is stored in this frontend file.
+    Real AI responses require a secure backend.
+    No private AI API key is placed in this public frontend.
   */
   AI_ENABLED: false,
 
   /*
-    Exchange-rate conversion is intentionally disabled until
-    a real exchange-rate source is connected.
+    Exchange-rate conversion remains disabled until a real
+    exchange-rate source is connected.
   */
   EXCHANGE_RATES_ENABLED: false
 };
@@ -110,13 +110,24 @@ if (nicheForm && nicheResult) {
 
     event.preventDefault();
 
-    const interest = document.getElementById("nicheInterest").value;
-    const strength = document.getElementById("nicheStrength").value;
-    const work = document.getElementById("nicheWork").value;
-    const goal = document.getElementById("nicheGoal").value;
-    const lifestyle = document.getElementById("nicheLifestyle").value;
+    const interest =
+      document.getElementById("nicheInterest").value;
+
+    const strength =
+      document.getElementById("nicheStrength").value;
+
+    const work =
+      document.getElementById("nicheWork").value;
+
+    const goal =
+      document.getElementById("nicheGoal").value;
+
+    const lifestyle =
+      document.getElementById("nicheLifestyle").value;
+
 
     if (!interest || !strength || !work || !goal || !lifestyle) {
+
       nicheResult.classList.remove("hidden");
 
       nicheResult.innerHTML = `
@@ -405,14 +416,20 @@ function addChatMessage(type, title, message) {
     return;
   }
 
-  const messageElement = document.createElement("div");
+  const messageElement =
+    document.createElement("div");
 
-  messageElement.className = `chat-message ${type}`;
+  messageElement.className =
+    `chat-message ${type}`;
 
-  const strong = document.createElement("strong");
+  const strong =
+    document.createElement("strong");
+
   strong.textContent = title;
 
-  const paragraph = document.createElement("p");
+  const paragraph =
+    document.createElement("p");
+
   paragraph.textContent = message;
 
   messageElement.appendChild(strong);
@@ -420,9 +437,19 @@ function addChatMessage(type, title, message) {
 
   chatMessages.appendChild(messageElement);
 
-  chatMessages.scrollTop = chatMessages.scrollHeight;
+  chatMessages.scrollTop =
+    chatMessages.scrollHeight;
 }
 
+
+/*
+  AI Co-Pilot currently keeps the interface clean.
+
+  No placeholder/error response is displayed when a question
+  is submitted.
+
+  A real AI response requires a secure backend connection.
+*/
 
 if (chatForm && chatInput) {
 
@@ -430,7 +457,8 @@ if (chatForm && chatInput) {
 
     event.preventDefault();
 
-    const question = chatInput.value.trim();
+    const question =
+      chatInput.value.trim();
 
     if (!question) {
       return;
@@ -448,36 +476,22 @@ if (chatForm && chatInput) {
 
 
     /*
-      AI is not connected to an external AI service yet.
+      Real AI response connection will be added through
+      a secure backend.
 
-      No private API key is stored in this frontend file.
+      No private API key is placed in this public frontend.
     */
 
-    if (!CONFIG.AI_ENABLED) {
-
-      setTimeout(function () {
-
-        addChatMessage(
-          "assistant",
-          "AI Co-Pilot",
-          "AI Co-Pilot is not configured yet. Your question was not sent to an external AI service. Please configure a secure backend connection before enabling AI responses."
-        );
-
-      }, 300);
-
-      return;
-    }
+    trackEvent("ai_question_submitted");
 
   });
 
-}
 
+  /*
+    Pressing Enter submits the AI Co-Pilot question.
 
-/* =========================================================
-   AI CO-PILOT — ENTER KEY SUPPORT
-   ========================================================= */
-
-if (chatInput) {
+    Shift + Enter remains available where supported.
+  */
 
   chatInput.addEventListener("keydown", function (event) {
 
@@ -488,8 +502,15 @@ if (chatInput) {
 
       event.preventDefault();
 
-      if (chatForm) {
+      if (typeof chatForm.requestSubmit === "function") {
         chatForm.requestSubmit();
+      } else {
+        chatForm.dispatchEvent(
+          new Event("submit", {
+            bubbles: true,
+            cancelable: true
+          })
+        );
       }
 
     }
@@ -522,9 +543,14 @@ if (clearChatButton && chatMessages) {
    KNOW YOUR WORTH
    ========================================================= */
 
-const worthForm = document.getElementById("worthForm");
-const worthResult = document.getElementById("worthResult");
-const clearWorthButton = document.getElementById("clearWorth");
+const worthForm =
+  document.getElementById("worthForm");
+
+const worthResult =
+  document.getElementById("worthResult");
+
+const clearWorthButton =
+  document.getElementById("clearWorth");
 
 
 if (worthForm && worthResult) {
@@ -541,16 +567,24 @@ if (worthForm && worthResult) {
       document.getElementById("targetCurrency").value;
 
     const hourly =
-      Number(document.getElementById("hourlyAmount").value);
+      Number(
+        document.getElementById("hourlyAmount").value
+      );
 
     const hoursPerDay =
-      Number(document.getElementById("hoursPerDay").value);
+      Number(
+        document.getElementById("hoursPerDay").value
+      );
 
     const daysPerWeek =
-      Number(document.getElementById("daysPerWeek").value);
+      Number(
+        document.getElementById("daysPerWeek").value
+      );
 
     const monthsPerYear =
-      Number(document.getElementById("monthsPerYear").value);
+      Number(
+        document.getElementById("monthsPerYear").value
+      );
 
 
     if (
@@ -588,10 +622,6 @@ if (worthForm && worthResult) {
       weekly * 52;
 
 
-    /*
-      If both currencies are the same, no conversion is necessary.
-    */
-
     if (
       startingCurrency === targetCurrency
     ) {
@@ -614,10 +644,6 @@ if (worthForm && worthResult) {
     }
 
 
-    /*
-      Different currencies require a live exchange-rate source.
-    */
-
     if (!CONFIG.EXCHANGE_RATES_ENABLED) {
 
       worthResult.classList.remove("hidden");
@@ -638,10 +664,13 @@ if (worthForm && worthResult) {
         </p>
       `;
 
-      trackEvent("currency_conversion_unavailable", {
-        starting_currency: startingCurrency,
-        target_currency: targetCurrency
-      });
+      trackEvent(
+        "currency_conversion_unavailable",
+        {
+          starting_currency: startingCurrency,
+          target_currency: targetCurrency
+        }
+      );
 
       return;
     }
@@ -682,7 +711,9 @@ function displayWorthResults(
       <p>
         <strong>Hourly Earnings:</strong>
         ${startingSymbol}${formatNumber(
-          Number(document.getElementById("hourlyAmount").value)
+          Number(
+            document.getElementById("hourlyAmount").value
+          )
         )}
       </p>
 
@@ -1083,47 +1114,24 @@ const alisonMessage =
 
 if (alisonLink) {
 
-  if (
-    CONFIG.ALISON_AFFILIATE_URL &&
-    CONFIG.ALISON_AFFILIATE_URL !== "ALISON_AFFILIATE_URL"
-  ) {
+  alisonLink.href =
+    CONFIG.ALISON_AFFILIATE_URL;
 
-    alisonLink.href =
-      CONFIG.ALISON_AFFILIATE_URL;
-
-    alisonLink.target = "_blank";
-    alisonLink.rel = "noopener noreferrer";
-
-    alisonLink.addEventListener("click", function () {
-
-      trackEvent("alison_course_link_click");
-
-    });
+  alisonLink.target = "_blank";
+  alisonLink.rel = "noopener noreferrer";
 
 
-    if (alisonMessage) {
-      alisonMessage.textContent =
-        "Course information and availability are provided by Alison.";
-    }
+  alisonLink.addEventListener("click", function () {
 
-  } else {
+    trackEvent("alison_course_link_click");
 
-    alisonLink.addEventListener("click", function (event) {
+  });
 
-      event.preventDefault();
 
-      if (alisonMessage) {
-
-        alisonMessage.textContent =
-          "The course link has not been configured yet. Please check back later.";
-
-      }
-
-    });
-
+  if (alisonMessage) {
 
     alisonMessage.textContent =
-      "The course link will be available once the site owner configures it.";
+      "Course information and availability are provided by Alison.";
 
   }
 
