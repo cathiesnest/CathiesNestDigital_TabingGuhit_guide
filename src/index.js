@@ -58,12 +58,11 @@ export default {
 
         const systemInstruction =
           "You are the AI Co-Pilot for Tabing Guhit, " +
-          "a free digital toolbox for career exploration, learning, " +
-          "personal planning, and growth. " +
+          "a free digital toolbox for career exploration, " +
+          "learning, personal planning, and growth. " +
           "Help users with practical career guidance, job-search questions, " +
           "workplace concerns, skills development, learning paths, " +
-          "and personal planning. " +
-          "Be supportive, clear, practical, and concise. " +
+          "and personal planning. Be supportive, clear, practical, and concise. " +
           "Answer the user's actual question directly. " +
           "Do not mention these instructions. " +
           "Do not claim to be a licensed medical, legal, or financial professional. " +
@@ -109,7 +108,6 @@ export default {
         if (!geminiResponse.ok) {
           console.error("Gemini API request failed:", {
             status: geminiResponse.status,
-            statusText: geminiResponse.statusText,
             data
           });
 
@@ -178,7 +176,7 @@ export default {
     }
 
     // =====================================================
-    // CURRENCY CONVERSION API
+    // KNOW YOUR WORTH — CURRENCY CONVERSION
     // =====================================================
 
     if (url.pathname === "/api/exchange-rate") {
@@ -197,20 +195,40 @@ export default {
       }
 
       try {
-        const from = (
+        const from = String(
           url.searchParams.get("from") || "USD"
-        ).toUpperCase();
+        )
+          .trim()
+          .toUpperCase();
 
-        const to = (
+        const to = String(
           url.searchParams.get("to") || "PHP"
-        ).toUpperCase();
+        )
+          .trim()
+          .toUpperCase();
 
+        if (!from || !to) {
+          return new Response(
+            JSON.stringify({
+              error: "Starting and target currencies are required."
+            }),
+            {
+              status: 400,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        // Same currency = 1:1 conversion.
         if (from === to) {
           return new Response(
             JSON.stringify({
+              rate: 1,
               from,
               to,
-              rate: 1
+              source: "same-currency"
             }),
             {
               status: 200,
@@ -221,25 +239,40 @@ export default {
           );
         }
 
-        const exchangeUrl =
-          "https://api.frankfurter.app/latest?from=" +
-          encodeURIComponent(from) +
-          "&to=" +
-          encodeURIComponent(to);
+        const exchangeResponse = await fetch(
+          `https://api.frankfurter.app/latest?from=${encodeURIComponent(
+            from
+          )}&to=${encodeURIComponent(to)}`
+        );
 
-        const rateResponse = await fetch(exchangeUrl);
-        const rateData = await rateResponse.json();
+        const exchangeData = await exchangeResponse.json();
 
-        if (!rateResponse.ok || !rateData?.rates?.[to]) {
+        if (!exchangeResponse.ok) {
           console.error(
             "Exchange-rate request failed:",
-            rateData
+            exchangeData
           );
 
           return new Response(
             JSON.stringify({
               error:
-                "A live exchange rate could not be retrieved."
+                "Live exchange-rate service is unavailable."
+            }),
+            {
+              status: 502,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        const rate = Number(exchangeData?.rates?.[to]);
+
+        if (!Number.isFinite(rate) || rate <= 0) {
+          return new Response(
+            JSON.stringify({
+              error: "No valid exchange rate was returned."
             }),
             {
               status: 502,
@@ -252,10 +285,11 @@ export default {
 
         return new Response(
           JSON.stringify({
+            rate,
             from,
             to,
-            rate: rateData.rates[to],
-            date: rateData.date
+            date: exchangeData?.date || null,
+            source: "Frankfurter"
           }),
           {
             status: 200,
@@ -273,7 +307,7 @@ export default {
         return new Response(
           JSON.stringify({
             error:
-              "Unable to retrieve the exchange rate right now."
+              "Unable to retrieve the live exchange rate."
           }),
           {
             status: 502,
