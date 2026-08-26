@@ -5,7 +5,6 @@ export default {
     // =====================================================
     // AI CO-PILOT
     // =====================================================
-
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return new Response(
@@ -177,7 +176,6 @@ export default {
     // =====================================================
     // KNOW YOUR WORTH — CURRENCY CONVERSION
     // =====================================================
-
     if (url.pathname === "/api/exchange-rate") {
       if (request.method !== "GET") {
         return new Response(
@@ -220,6 +218,7 @@ export default {
           );
         }
 
+        // Same currency = 1:1 conversion.
         if (from === to) {
           return new Response(
             JSON.stringify({
@@ -237,11 +236,11 @@ export default {
           );
         }
 
+        // Current Frankfurter API endpoint
         const exchangeResponse = await fetch(
-          "https://api.frankfurter.app/latest?from=" +
-            encodeURIComponent(from) +
-            "&to=" +
-            encodeURIComponent(to)
+          `https://api.frankfurter.dev/v1/latest?base=${encodeURIComponent(
+            from
+          )}&symbols=${encodeURIComponent(to)}`
         );
 
         const exchangeData = await exchangeResponse.json();
@@ -321,7 +320,6 @@ export default {
     // =====================================================
     // EXISTING TABING GUHIT WEBSITE
     // =====================================================
-
     return env.ASSETS.fetch(request);
   }
 };
