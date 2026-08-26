@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/wrangler.json",
+  "name": "cathiesnestdigital-tabingguhit-guide",
+  "main": "worker.js",
+  "compatibility_date": "2026-08-26",
+
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "run_worker_first": ["/api/*"]
+  },
+
+  "observability": {
+    "enabled": true
+  }
+}
