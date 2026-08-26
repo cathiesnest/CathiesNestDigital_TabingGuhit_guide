@@ -4,7 +4,7 @@
 
    FUNCTIONALITY:
    - Find Your Niche
-   - AI Co-Pilot interface
+   - AI Co-Pilot
    - Know Your Worth calculator
    - Financial Reset
    - Expense management
@@ -12,7 +12,8 @@
    - Optional GA4 event tracking
 
    SECURITY:
-   - No API keys
+   - No API keys in this public frontend
+   - AI requests are sent through the secure backend
    - No passwords
    - No private credentials
    - No permanent storage of financial information
@@ -29,10 +30,19 @@ const CONFIG = {
     "https://alison.com/?utm_source=alison_user&utm_medium=affiliate&utm_campaign=42404117",
 
   /*
-    Real AI responses require a secure backend.
-    No private AI API key is placed in this public frontend.
+    AI requests are handled by the Cloudflare Worker backend.
+    The Gemini API key must NEVER be placed in this file.
   */
-  AI_ENABLED: false,
+  AI_ENABLED: true,
+
+  /*
+    Replace this only if your Worker uses a different
+    public API endpoint.
+
+    If the Worker is deployed on the same domain/path,
+    /api/chat is used.
+  */
+  AI_ENDPOINT: "/api/chat",
 
   /*
     Exchange-rate conversion remains disabled until a real
@@ -378,7 +388,9 @@ if (nicheForm && nicheResult) {
 }
 
 
-/* CLEAR NICHE */
+/* =========================================================
+   CLEAR NICHE
+   ========================================================= */
 
 if (clearNicheButton) {
 
@@ -404,11 +416,40 @@ if (clearNicheButton) {
    AI CO-PILOT
    ========================================================= */
 
-const chatForm = document.getElementById("chatForm");
-const chatInput = document.getElementById("chatInput");
-const chatMessages = document.getElementById("chatMessages");
-const clearChatButton = document.getElementById("clearChat");
+const chatForm =
+  document.getElementById("chatForm");
 
+const chatInput =
+  document.getElementById("chatInput");
+
+const chatMessages =
+  document.getElementById("chatMessages");
+
+const clearChatButton =
+  document.getElementById("clearChat");
+
+
+/*
+  Initial welcome message.
+*/
+
+if (chatMessages) {
+
+  chatMessages.innerHTML = `
+    <div class="chat-message assistant">
+      <strong>AI Co-Pilot</strong>
+      <p>
+        Your AI Co-Pilot is ready. What are your thoughts for today?
+      </p>
+    </div>
+  `;
+
+}
+
+
+/*
+  Add a chat message safely.
+*/
 
 function addChatMessage(type, title, message) {
 
@@ -422,20 +463,25 @@ function addChatMessage(type, title, message) {
   messageElement.className =
     `chat-message ${type}`;
 
+
   const strong =
     document.createElement("strong");
 
   strong.textContent = title;
+
 
   const paragraph =
     document.createElement("p");
 
   paragraph.textContent = message;
 
+
   messageElement.appendChild(strong);
   messageElement.appendChild(paragraph);
 
+
   chatMessages.appendChild(messageElement);
+
 
   chatMessages.scrollTop =
     chatMessages.scrollHeight;
@@ -443,98 +489,281 @@ function addChatMessage(type, title, message) {
 
 
 /*
-  AI Co-Pilot currently keeps the interface clean.
+  Send the user's question to the secure backend.
 
-  No placeholder/error response is displayed when a question
-  is submitted.
-
-  A real AI response requires a secure backend connection.
+  The Gemini API key is NOT stored in this frontend.
 */
 
-if (chatForm && chatInput) {
+async function sendAIQuestion(question) {
 
-  chatForm.addEventListener("submit", function (event) {
+  if (!CONFIG.AI_ENABLED) {
 
-    event.preventDefault();
+    addChatMessage(
+      "assistant",
+      "AI Co-Pilot",
+      "AI Co-Pilot is currently unavailable."
+    );
 
-    const question =
-      chatInput.value.trim();
+    return;
+  }
 
-    if (!question) {
-      return;
+
+  const thinkingElement =
+    document.createElement("div");
+
+  thinkingElement.className =
+    "chat-message assistant";
+
+
+  const thinkingTitle =
+    document.createElement("strong");
+
+  thinkingTitle.textContent =
+    "AI Co-Pilot";
+
+
+  const thinkingText =
+    document.createElement("p");
+
+  thinkingText.textContent =
+    "Thinking...";
+
+
+  thinkingElement.appendChild(thinkingTitle);
+  thinkingElement.appendChild(thinkingText);
+
+
+  if (chatMessages) {
+
+    chatMessages.appendChild(thinkingElement);
+
+    chatMessages.scrollTop =
+      chatMessages.scrollHeight;
+
+  }
+
+
+  try {
+
+    const response =
+      await fetch(
+        CONFIG.AI_ENDPOINT,
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type": "application/json"
+          },
+
+          body: JSON.stringify({
+            message: question
+          })
+        }
+      );
+
+
+    let data = null;
+
+    try {
+      data = await response.json();
+    } catch (jsonError) {
+      data = null;
+    }
+
+
+    if (thinkingElement) {
+      thinkingElement.remove();
+    }
+
+
+    if (!response.ok) {
+
+      throw new Error(
+        data?.error ||
+        "The AI service could not respond right now."
+      );
+
+    }
+
+
+    const answer =
+      data?.response ||
+      data?.answer ||
+      data?.message ||
+      data?.text;
+
+
+    if (!answer) {
+
+      throw new Error(
+        "The AI service returned an empty response."
+      );
+
     }
 
 
     addChatMessage(
-      "user",
-      "You",
-      question
+      "assistant",
+      "AI Co-Pilot",
+      String(answer)
     );
 
 
-    chatInput.value = "";
+    trackEvent(
+      "ai_response_received"
+    );
+
+  } catch (error) {
+
+    if (thinkingElement) {
+      thinkingElement.remove();
+    }
 
 
-    /*
-      Real AI response connection will be added through
-      a secure backend.
+    addChatMessage(
+      "assistant",
+      "AI Co-Pilot",
+      "I'm sorry, but I couldn't respond right now. Please try again in a moment."
+    );
 
-      No private API key is placed in this public frontend.
-    */
 
-    trackEvent("ai_question_submitted");
+    trackEvent(
+      "ai_response_error"
+    );
 
-  });
+    console.error(
+      "AI Co-Pilot error:",
+      error
+    );
+
+  }
+
+}
+
+
+/*
+  AI Co-Pilot form submission.
+*/
+
+if (chatForm && chatInput) {
+
+  chatForm.addEventListener(
+    "submit",
+    async function (event) {
+
+      event.preventDefault();
+
+
+      const question =
+        chatInput.value.trim();
+
+
+      if (!question) {
+        return;
+      }
+
+
+      addChatMessage(
+        "user",
+        "You",
+        question
+      );
+
+
+      chatInput.value = "";
+
+
+      trackEvent(
+        "ai_question_submitted"
+      );
+
+
+      await sendAIQuestion(
+        question
+      );
+
+    }
+  );
 
 
   /*
     Pressing Enter submits the AI Co-Pilot question.
 
-    Shift + Enter remains available where supported.
+    Shift + Enter remains available for a new line.
   */
 
-  chatInput.addEventListener("keydown", function (event) {
+  chatInput.addEventListener(
+    "keydown",
+    function (event) {
 
-    if (
-      event.key === "Enter" &&
-      !event.shiftKey
-    ) {
+      if (
+        event.key === "Enter" &&
+        !event.shiftKey
+      ) {
 
-      event.preventDefault();
+        event.preventDefault();
 
-      if (typeof chatForm.requestSubmit === "function") {
-        chatForm.requestSubmit();
-      } else {
-        chatForm.dispatchEvent(
-          new Event("submit", {
-            bubbles: true,
-            cancelable: true
-          })
-        );
+
+        if (
+          typeof chatForm.requestSubmit ===
+          "function"
+        ) {
+
+          chatForm.requestSubmit();
+
+        } else {
+
+          chatForm.dispatchEvent(
+            new Event(
+              "submit",
+              {
+                bubbles: true,
+                cancelable: true
+              }
+            )
+          );
+
+        }
+
       }
 
     }
-
-  });
+  );
 
 }
 
 
-/* CLEAR CHAT */
+/* =========================================================
+   CLEAR CHAT
+   ========================================================= */
 
 if (clearChatButton && chatMessages) {
 
-  clearChatButton.addEventListener("click", function () {
+  clearChatButton.addEventListener(
+    "click",
+    function () {
 
-    chatMessages.innerHTML = "";
+      chatMessages.innerHTML = `
+        <div class="chat-message assistant">
+          <strong>AI Co-Pilot</strong>
+          <p>
+            Your AI Co-Pilot is ready. What are your thoughts for today?
+          </p>
+        </div>
+      `;
 
-    if (chatInput) {
-      chatInput.value = "";
+
+      if (chatInput) {
+        chatInput.value = "";
+      }
+
+
+      trackEvent(
+        "ai_conversation_cleared"
+      );
+
     }
-
-    trackEvent("ai_conversation_cleared");
-
-  });
+  );
 
 }
 
@@ -555,143 +784,263 @@ const clearWorthButton =
 
 if (worthForm && worthResult) {
 
-  worthForm.addEventListener("submit", function (event) {
+  worthForm.addEventListener(
+    "submit",
+    function (event) {
 
-    event.preventDefault();
-
-
-    const startingCurrency =
-      document.getElementById("startingCurrency").value;
-
-    const targetCurrency =
-      document.getElementById("targetCurrency").value;
-
-    const hourly =
-      Number(
-        document.getElementById("hourlyAmount").value
-      );
-
-    const hoursPerDay =
-      Number(
-        document.getElementById("hoursPerDay").value
-      );
-
-    const daysPerWeek =
-      Number(
-        document.getElementById("daysPerWeek").value
-      );
-
-    const monthsPerYear =
-      Number(
-        document.getElementById("monthsPerYear").value
-      );
+      event.preventDefault();
 
 
-    if (
-      hourly < 0 ||
-      hoursPerDay <= 0 ||
-      daysPerWeek <= 0 ||
-      monthsPerYear <= 0
-    ) {
+      const startingCurrency =
+        document.getElementById(
+          "startingCurrency"
+        ).value;
 
-      worthResult.classList.remove("hidden");
 
-      worthResult.innerHTML = `
-        <h3>Please check your numbers.</h3>
+      const targetCurrency =
+        document.getElementById(
+          "targetCurrency"
+        ).value;
 
-        <p>
-          Hours per day, days per week, and months per year
-          must contain valid positive values.
-        </p>
-      `;
 
-      return;
+      const hourly =
+        Number(
+          document.getElementById(
+            "hourlyAmount"
+          ).value
+        );
+
+
+      const hoursPerDay =
+        Number(
+          document.getElementById(
+            "hoursPerDay"
+          ).value
+        );
+
+
+      const daysPerWeek =
+        Number(
+          document.getElementById(
+            "daysPerWeek"
+          ).value
+        );
+
+
+      const monthsPerYear =
+        Number(
+          document.getElementById(
+            "monthsPerYear"
+          ).value
+        );
+
+
+      if (
+        !Number.isFinite(hourly) ||
+        hourly < 0 ||
+        !Number.isFinite(hoursPerDay) ||
+        hoursPerDay <= 0 ||
+        !Number.isFinite(daysPerWeek) ||
+        daysPerWeek <= 0 ||
+        !Number.isFinite(monthsPerYear) ||
+        monthsPerYear <= 0
+      ) {
+
+        worthResult.classList.remove(
+          "hidden"
+        );
+
+
+        worthResult.innerHTML = `
+          <h3>Please check your numbers.</h3>
+
+          <p>
+            Hours per day, days per week, and months per year
+            must contain valid positive values.
+          </p>
+        `;
+
+
+        return;
+      }
+
+
+      const daily =
+        hourly * hoursPerDay;
+
+
+      const weekly =
+        daily * daysPerWeek;
+
+
+      const monthly =
+        weekly * 52 / 12;
+
+
+      const annual =
+        weekly * 52;
+
+
+      /*
+        Same currency:
+        show the complete earnings estimate normally.
+      */
+
+      if (
+        startingCurrency === targetCurrency
+      ) {
+
+        const symbol =
+          getCurrencySymbol(
+            startingCurrency
+          );
+
+
+        displayWorthResults(
+          symbol,
+          symbol,
+          hourly,
+          daily,
+          weekly,
+          monthly,
+          annual,
+          startingCurrency,
+          targetCurrency,
+          true
+        );
+
+
+        return;
+      }
+
+
+      /*
+        Different currencies:
+        keep the exact conversion-unavailable message,
+        but ALSO show the earnings calculated in the
+        starting currency.
+
+        No exchange rate is invented.
+      */
+
+      if (
+        !CONFIG.EXCHANGE_RATES_ENABLED
+      ) {
+
+        const startingSymbol =
+          getCurrencySymbol(
+            startingCurrency
+          );
+
+
+        worthResult.classList.remove(
+          "hidden"
+        );
+
+
+        worthResult.innerHTML = `
+          <h3>Conversion is not available yet.</h3>
+
+          <p>
+            Your earnings have been calculated in
+            <strong>${startingCurrency}</strong>,
+            but a live exchange-rate service has not been configured.
+          </p>
+
+          <div class="earnings-list">
+
+            <p>
+              <strong>Estimated earnings:</strong>
+            </p>
+
+            <p>
+              <strong>Daily:</strong>
+              ${startingSymbol}${formatNumber(daily)}
+            </p>
+
+            <p>
+              <strong>Weekly:</strong>
+              ${startingSymbol}${formatNumber(weekly)}
+            </p>
+
+            <p>
+              <strong>Monthly:</strong>
+              ${startingSymbol}${formatNumber(monthly)}
+            </p>
+
+            <p>
+              <strong>Annually:</strong>
+              ${startingSymbol}${formatNumber(annual)}
+            </p>
+
+          </div>
+
+          <p>
+            <strong>Starting Currency:</strong>
+            ${startingCurrency}
+          </p>
+
+          <p>
+            <strong>Target Currency:</strong>
+            ${targetCurrency}
+          </p>
+
+          <p>
+            No exchange rate has been estimated or invented.
+            Please try again later or select the same starting
+            and target currency.
+          </p>
+        `;
+
+
+        trackEvent(
+          "currency_conversion_unavailable",
+          {
+            starting_currency:
+              startingCurrency,
+
+            target_currency:
+              targetCurrency
+          }
+        );
+
+
+        worthResult.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
+        });
+
+
+        return;
+      }
+
     }
-
-
-    const daily =
-      hourly * hoursPerDay;
-
-    const weekly =
-      daily * daysPerWeek;
-
-    const monthly =
-      weekly * 52 / 12;
-
-    const annual =
-      weekly * 52;
-
-
-    if (
-      startingCurrency === targetCurrency
-    ) {
-
-      const symbol =
-        getCurrencySymbol(startingCurrency);
-
-      displayWorthResults(
-        symbol,
-        symbol,
-        daily,
-        weekly,
-        monthly,
-        annual,
-        startingCurrency,
-        targetCurrency
-      );
-
-      return;
-    }
-
-
-    if (!CONFIG.EXCHANGE_RATES_ENABLED) {
-
-      worthResult.classList.remove("hidden");
-
-      worthResult.innerHTML = `
-        <h3>Conversion is not available yet.</h3>
-
-        <p>
-          Your earnings have been calculated in
-          <strong>${startingCurrency}</strong>,
-          but a live exchange-rate service has not been configured.
-        </p>
-
-        <p>
-          No exchange rate has been estimated or invented.
-          Please try again later or select the same starting
-          and target currency.
-        </p>
-      `;
-
-      trackEvent(
-        "currency_conversion_unavailable",
-        {
-          starting_currency: startingCurrency,
-          target_currency: targetCurrency
-        }
-      );
-
-      return;
-    }
-
-  });
+  );
 
 }
 
 
+/* =========================================================
+   DISPLAY SAME-CURRENCY WORTH RESULTS
+   ========================================================= */
+
 function displayWorthResults(
   startingSymbol,
   targetSymbol,
+  hourly,
   daily,
   weekly,
   monthly,
   annual,
   startingCurrency,
-  targetCurrency
+  targetCurrency,
+  sameCurrency
 ) {
 
-  worthResult.classList.remove("hidden");
+  worthResult.classList.remove(
+    "hidden"
+  );
+
 
   worthResult.innerHTML = `
     <h3>Earnings Estimate</h3>
@@ -710,11 +1059,7 @@ function displayWorthResults(
 
       <p>
         <strong>Hourly Earnings:</strong>
-        ${startingSymbol}${formatNumber(
-          Number(
-            document.getElementById("hourlyAmount").value
-          )
-        )}
+        ${startingSymbol}${formatNumber(hourly)}
       </p>
 
       <p>
@@ -746,9 +1091,12 @@ function displayWorthResults(
   `;
 
 
-  trackEvent("worth_calculated", {
-    currency: startingCurrency
-  });
+  trackEvent(
+    "worth_calculated",
+    {
+      currency: startingCurrency
+    }
+  );
 
 
   worthResult.scrollIntoView({
@@ -759,24 +1107,36 @@ function displayWorthResults(
 }
 
 
-/* CLEAR WORTH */
+/* =========================================================
+   CLEAR WORTH
+   ========================================================= */
 
 if (clearWorthButton) {
 
-  clearWorthButton.addEventListener("click", function () {
+  clearWorthButton.addEventListener(
+    "click",
+    function () {
 
-    if (worthForm) {
-      worthForm.reset();
+      if (worthForm) {
+        worthForm.reset();
+      }
+
+
+      if (worthResult) {
+        worthResult.classList.add(
+          "hidden"
+        );
+
+        worthResult.innerHTML = "";
+      }
+
+
+      trackEvent(
+        "worth_calculator_cleared"
+      );
+
     }
-
-    if (worthResult) {
-      worthResult.classList.add("hidden");
-      worthResult.innerHTML = "";
-    }
-
-    trackEvent("worth_calculator_cleared");
-
-  });
+  );
 
 }
 
@@ -786,317 +1146,424 @@ if (clearWorthButton) {
    ========================================================= */
 
 const addExpenseButton =
-  document.getElementById("addExpense");
+  document.getElementById(
+    "addExpense"
+  );
 
 const expensesList =
-  document.getElementById("expensesList");
+  document.getElementById(
+    "expensesList"
+  );
 
 const showBudgetButton =
-  document.getElementById("showBudget");
+  document.getElementById(
+    "showBudget"
+  );
 
 const resetBudgetButton =
-  document.getElementById("resetBudget");
+  document.getElementById(
+    "resetBudget"
+  );
 
 const budgetResult =
-  document.getElementById("budgetResult");
+  document.getElementById(
+    "budgetResult"
+  );
 
 
-/* ADD EXPENSE */
+/* =========================================================
+   ADD EXPENSE
+   ========================================================= */
 
-if (addExpenseButton && expensesList) {
+if (
+  addExpenseButton &&
+  expensesList
+) {
 
-  addExpenseButton.addEventListener("click", function () {
+  addExpenseButton.addEventListener(
+    "click",
+    function () {
 
-    const row =
-      document.createElement("div");
-
-    row.className =
-      "expense-row";
-
-    row.innerHTML = `
-      <input
-        type="text"
-        class="expense-name"
-        placeholder="Expense name"
-        aria-label="Expense name"
-      >
-
-      <input
-        type="number"
-        class="expense-amount"
-        min="0"
-        step="0.01"
-        placeholder="Amount"
-        aria-label="Expense amount"
-      >
-
-      <button
-        type="button"
-        class="delete-expense"
-        aria-label="Delete expense"
-        title="Delete expense"
-      >
-        🗑
-      </button>
-    `;
-
-    expensesList.appendChild(row);
-
-    trackEvent("expense_added");
-
-    const nameInput =
-      row.querySelector(".expense-name");
-
-    if (nameInput) {
-      nameInput.focus();
-    }
-
-  });
-
-}
+      const row =
+        document.createElement(
+          "div"
+        );
 
 
-/* DELETE EXPENSE */
-
-if (expensesList) {
-
-  expensesList.addEventListener("click", function (event) {
-
-    const deleteButton =
-      event.target.closest(".delete-expense");
-
-    if (!deleteButton) {
-      return;
-    }
-
-    const row =
-      deleteButton.closest(".expense-row");
-
-    if (row) {
-      row.remove();
-
-      trackEvent("expense_deleted");
-    }
-
-  });
-
-}
+      row.className =
+        "expense-row";
 
 
-/* SHOW BUDGET */
+      row.innerHTML = `
+        <input
+          type="text"
+          class="expense-name"
+          placeholder="Expense name"
+          aria-label="Expense name"
+        >
 
-if (showBudgetButton && budgetResult) {
+        <input
+          type="number"
+          class="expense-amount"
+          min="0"
+          step="0.01"
+          placeholder="Amount"
+          aria-label="Expense amount"
+        >
 
-  showBudgetButton.addEventListener("click", function () {
+        <button
+          type="button"
+          class="delete-expense"
+          aria-label="Delete expense"
+          title="Delete expense"
+        >
+          🗑
+        </button>
+      `;
 
-    const income =
-      Number(
-        document.getElementById("monthlyIncome").value
+
+      expensesList.appendChild(
+        row
       );
 
 
-    if (!Number.isFinite(income) || income < 0) {
-
-      budgetResult.classList.remove("hidden");
-
-      budgetResult.innerHTML = `
-        <h3>Please enter your monthly income.</h3>
-
-        <p>
-          Enter a valid amount before creating your budget summary.
-        </p>
-      `;
-
-      return;
-    }
+      trackEvent(
+        "expense_added"
+      );
 
 
-    const currency =
-      document.getElementById("displayCurrency").value;
-
-    const symbol =
-      getCurrencySymbol(currency);
-
-
-    const expenseRows =
-      document.querySelectorAll(".expense-row");
+      const nameInput =
+        row.querySelector(
+          ".expense-name"
+        );
 
 
-    let totalExpenses = 0;
-
-
-    expenseRows.forEach(function (row) {
-
-      const amountInput =
-        row.querySelector(".expense-amount");
-
-      const amount =
-        Number(amountInput?.value || 0);
-
-      if (Number.isFinite(amount) && amount > 0) {
-        totalExpenses += amount;
+      if (nameInput) {
+        nameInput.focus();
       }
 
-    });
-
-
-    const remaining =
-      income - totalExpenses;
-
-
-    const percentageUsed =
-      income > 0
-        ? (totalExpenses / income) * 100
-        : 0;
-
-
-    const status =
-      remaining < 0
-        ? "Your listed expenses are higher than your monthly income."
-        : "Your listed expenses are within your monthly income.";
-
-
-    const statusClass =
-      remaining < 0
-        ? "budget-warning"
-        : "budget-positive";
-
-
-    budgetResult.classList.remove("hidden");
-
-
-    budgetResult.innerHTML = `
-      <h3>Budget Summary</h3>
-
-      <p>
-        <strong>Total Monthly Income:</strong>
-        ${symbol}${formatNumber(income)}
-      </p>
-
-      <p>
-        <strong>Total Monthly Expenses:</strong>
-        ${symbol}${formatNumber(totalExpenses)}
-      </p>
-
-      <p>
-        <strong>Remaining Balance:</strong>
-        ${symbol}${formatNumber(remaining)}
-      </p>
-
-      <p>
-        <strong>Percentage of Income Used:</strong>
-        ${formatNumber(percentageUsed, 1)}%
-      </p>
-
-      <p class="${statusClass}">
-        <strong>${status}</strong>
-      </p>
-    `;
-
-
-    trackEvent("budget_summary_generated", {
-      currency: currency
-    });
-
-
-    budgetResult.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest"
-    });
-
-  });
+    }
+  );
 
 }
 
 
-/* RESET BUDGET */
+/* =========================================================
+   DELETE EXPENSE
+   ========================================================= */
+
+if (expensesList) {
+
+  expensesList.addEventListener(
+    "click",
+    function (event) {
+
+      const deleteButton =
+        event.target.closest(
+          ".delete-expense"
+        );
+
+
+      if (!deleteButton) {
+        return;
+      }
+
+
+      const row =
+        deleteButton.closest(
+          ".expense-row"
+        );
+
+
+      if (row) {
+
+        row.remove();
+
+
+        trackEvent(
+          "expense_deleted"
+        );
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   SHOW BUDGET
+   ========================================================= */
+
+if (
+  showBudgetButton &&
+  budgetResult
+) {
+
+  showBudgetButton.addEventListener(
+    "click",
+    function () {
+
+      const income =
+        Number(
+          document.getElementById(
+            "monthlyIncome"
+          ).value
+        );
+
+
+      if (
+        !Number.isFinite(income) ||
+        income < 0
+      ) {
+
+        budgetResult.classList.remove(
+          "hidden"
+        );
+
+
+        budgetResult.innerHTML = `
+          <h3>Please enter your monthly income.</h3>
+
+          <p>
+            Enter a valid amount before creating your budget summary.
+          </p>
+        `;
+
+
+        return;
+      }
+
+
+      const currency =
+        document.getElementById(
+          "displayCurrency"
+        ).value;
+
+
+      const symbol =
+        getCurrencySymbol(
+          currency
+        );
+
+
+      const expenseRows =
+        document.querySelectorAll(
+          ".expense-row"
+        );
+
+
+      let totalExpenses = 0;
+
+
+      expenseRows.forEach(
+        function (row) {
+
+          const amountInput =
+            row.querySelector(
+              ".expense-amount"
+            );
+
+
+          const amount =
+            Number(
+              amountInput?.value || 0
+            );
+
+
+          if (
+            Number.isFinite(amount) &&
+            amount > 0
+          ) {
+
+            totalExpenses +=
+              amount;
+
+          }
+
+        }
+      );
+
+
+      const remaining =
+        income - totalExpenses;
+
+
+      const percentageUsed =
+        income > 0
+          ? (totalExpenses / income) * 100
+          : 0;
+
+
+      const status =
+        remaining < 0
+          ? "Your listed expenses are higher than your monthly income."
+          : "Your listed expenses are within your monthly income.";
+
+
+      const statusClass =
+        remaining < 0
+          ? "budget-warning"
+          : "budget-positive";
+
+
+      budgetResult.classList.remove(
+        "hidden"
+      );
+
+
+      budgetResult.innerHTML = `
+        <h3>Budget Summary</h3>
+
+        <p>
+          <strong>Total Monthly Income:</strong>
+          ${symbol}${formatNumber(income)}
+        </p>
+
+        <p>
+          <strong>Total Monthly Expenses:</strong>
+          ${symbol}${formatNumber(totalExpenses)}
+        </p>
+
+        <p>
+          <strong>Remaining Balance:</strong>
+          ${symbol}${formatNumber(remaining)}
+        </p>
+
+        <p>
+          <strong>Percentage of Income Used:</strong>
+          ${formatNumber(percentageUsed, 1)}%
+        </p>
+
+        <p class="${statusClass}">
+          <strong>${status}</strong>
+        </p>
+      `;
+
+
+      trackEvent(
+        "budget_summary_generated",
+        {
+          currency: currency
+        }
+      );
+
+
+      budgetResult.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   RESET BUDGET
+   ========================================================= */
 
 if (resetBudgetButton) {
 
-  resetBudgetButton.addEventListener("click", function () {
+  resetBudgetButton.addEventListener(
+    "click",
+    function () {
 
-    const incomeInput =
-      document.getElementById("monthlyIncome");
+      const incomeInput =
+        document.getElementById(
+          "monthlyIncome"
+        );
 
-    if (incomeInput) {
-      incomeInput.value = "";
+
+      if (incomeInput) {
+        incomeInput.value = "";
+      }
+
+
+      if (expensesList) {
+
+        expensesList.innerHTML = `
+          <div class="expense-row">
+
+            <input
+              type="text"
+              class="expense-name"
+              value="Rent"
+              aria-label="Expense name"
+            >
+
+            <input
+              type="number"
+              class="expense-amount"
+              min="0"
+              step="0.01"
+              placeholder="Amount"
+              aria-label="Expense amount"
+            >
+
+            <button
+              type="button"
+              class="delete-expense"
+              aria-label="Delete Rent expense"
+              title="Delete expense"
+            >
+              🗑
+            </button>
+
+          </div>
+
+          <div class="expense-row">
+
+            <input
+              type="text"
+              class="expense-name"
+              value="Bills"
+              aria-label="Expense name"
+            >
+
+            <input
+              type="number"
+              class="expense-amount"
+              min="0"
+              step="0.01"
+              placeholder="Amount"
+              aria-label="Expense amount"
+            >
+
+            <button
+              type="button"
+              class="delete-expense"
+              aria-label="Delete Bills expense"
+              title="Delete expense"
+            >
+              🗑
+            </button>
+
+          </div>
+        `;
+
+      }
+
+
+      if (budgetResult) {
+
+        budgetResult.classList.add(
+          "hidden"
+        );
+
+        budgetResult.innerHTML = "";
+
+      }
+
+
+      trackEvent(
+        "budget_reset"
+      );
+
     }
-
-
-    if (expensesList) {
-
-      expensesList.innerHTML = `
-        <div class="expense-row">
-
-          <input
-            type="text"
-            class="expense-name"
-            value="Rent"
-            aria-label="Expense name"
-          >
-
-          <input
-            type="number"
-            class="expense-amount"
-            min="0"
-            step="0.01"
-            placeholder="Amount"
-            aria-label="Expense amount"
-          >
-
-          <button
-            type="button"
-            class="delete-expense"
-            aria-label="Delete Rent expense"
-            title="Delete expense"
-          >
-            🗑
-          </button>
-
-        </div>
-
-        <div class="expense-row">
-
-          <input
-            type="text"
-            class="expense-name"
-            value="Bills"
-            aria-label="Expense name"
-          >
-
-          <input
-            type="number"
-            class="expense-amount"
-            min="0"
-            step="0.01"
-            placeholder="Amount"
-            aria-label="Expense amount"
-          >
-
-          <button
-            type="button"
-            class="delete-expense"
-            aria-label="Delete Bills expense"
-            title="Delete expense"
-          >
-            🗑
-          </button>
-
-        </div>
-      `;
-
-    }
-
-
-    if (budgetResult) {
-      budgetResult.classList.add("hidden");
-      budgetResult.innerHTML = "";
-    }
-
-
-    trackEvent("budget_reset");
-
-  });
+  );
 
 }
 
@@ -1106,10 +1573,14 @@ if (resetBudgetButton) {
    ========================================================= */
 
 const alisonLink =
-  document.getElementById("alisonLink");
+  document.getElementById(
+    "alisonLink"
+  );
 
 const alisonMessage =
-  document.getElementById("alisonMessage");
+  document.getElementById(
+    "alisonMessage"
+  );
 
 
 if (alisonLink) {
@@ -1117,15 +1588,25 @@ if (alisonLink) {
   alisonLink.href =
     CONFIG.ALISON_AFFILIATE_URL;
 
-  alisonLink.target = "_blank";
-  alisonLink.rel = "noopener noreferrer";
+
+  alisonLink.target =
+    "_blank";
 
 
-  alisonLink.addEventListener("click", function () {
+  alisonLink.rel =
+    "noopener noreferrer";
 
-    trackEvent("alison_course_link_click");
 
-  });
+  alisonLink.addEventListener(
+    "click",
+    function () {
+
+      trackEvent(
+        "alison_course_link_click"
+      );
+
+    }
+  );
 
 
   if (alisonMessage) {
@@ -1139,31 +1620,41 @@ if (alisonLink) {
 
 
 /* =========================================================
-   PREVENT ACCIDENTAL FORM SUBMISSION ON ENTER
-   WHERE APPROPRIATE
+   PREVENT ACCIDENTAL FORM SUBMISSION
+   ON EXPENSE ENTER KEY
    ========================================================= */
 
-document.addEventListener("keydown", function (event) {
+document.addEventListener(
+  "keydown",
+  function (event) {
 
-  if (
-    event.key === "Enter" &&
-    event.target.tagName === "INPUT" &&
-    event.target.closest(".expense-row")
-  ) {
+    if (
+      event.key === "Enter" &&
+      event.target.tagName === "INPUT" &&
+      event.target.closest(
+        ".expense-row"
+      )
+    ) {
 
-    event.preventDefault();
+      event.preventDefault();
+
+    }
 
   }
-
-});
+);
 
 
 /* =========================================================
    BASIC INITIALIZATION
    ========================================================= */
 
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener(
+  "DOMContentLoaded",
+  function () {
 
-  trackEvent("tabing_guhit_page_loaded");
+    trackEvent(
+      "tabing_guhit_page_loaded"
+    );
 
-});
+  }
+);
