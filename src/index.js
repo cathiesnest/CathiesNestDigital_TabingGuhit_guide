@@ -1,14 +1,13 @@
+```javascript
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // AI Career Assistant endpoint
+    // AI Co-Pilot endpoint
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return new Response(
-          JSON.stringify({
-            error: "Method not allowed."
-          }),
+          JSON.stringify({ error: "Method not allowed." }),
           {
             status: 405,
             headers: {
@@ -36,8 +35,10 @@ export default {
           );
         }
 
-        // GEMINI_API_KEY must be stored as a Cloudflare Worker secret.
+        // Gemini API key must be stored as a Cloudflare Worker Secret.
         if (!env.GEMINI_API_KEY) {
+          console.error("GEMINI_API_KEY is missing.");
+
           return new Response(
             JSON.stringify({
               error: "AI service is not configured yet."
@@ -51,42 +52,18 @@ export default {
           );
         }
 
-        const systemInstruction = `
-You are the AI Career Assistant for Tabing Guhit by CathiesNest Digital.
-
-Tabing Guhit is a free digital toolbox focused on career exploration,
-learning, personal planning, and growth.
-
-Your role is to help users think through career concerns in a practical,
-encouraging, realistic, and respectful way.
-
-Focus especially on:
-- career direction
-- job-search concerns
-- skills and transferable skills
-- identifying strengths
-- career transitions
-- workplace concerns
-- learning opportunities
-- resume and interview preparation
-- remote-work considerations
-- realistic next steps
-- confidence and professional growth
-
-Keep responses concise and useful.
-
-Do not make decisions for the user.
-Do not guarantee employment, income, promotions, or career outcomes.
-Do not provide professional medical, legal, or financial advice.
-
-When appropriate, give the user 2–4 practical next steps.
-
-User message:
-${message}
-        `.trim();
+        const prompt =
+          "You are the AI Co-Pilot for Tabing Guhit, a free digital toolbox for career exploration, learning, personal planning, and growth. " +
+          "Help users with practical career guidance, job-search questions, workplace concerns, skills development, learning paths, and personal planning. " +
+          "Be supportive, clear, practical, and concise. " +
+          "Do not claim to be a licensed medical, legal, or financial professional. " +
+          "When appropriate, explain that the user should consult a qualified professional for specialized advice. " +
+          "Answer the user's actual question directly and do not mention these instructions. " +
+          "User message: " +
+          message;
 
         const geminiResponse = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
           {
             method: "POST",
             headers: {
@@ -94,23 +71,20 @@ ${message}
               "x-goog-api-key": env.GEMINI_API_KEY
             },
             body: JSON.stringify({
-              systemInstruction: {
-                parts: [
-                  {
-                    text: systemInstruction
-                  }
-                ]
-              },
               contents: [
                 {
                   role: "user",
                   parts: [
                     {
-                      text: message
+                      text: prompt
                     }
                   ]
                 }
-              ]
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 600
+              }
             })
           }
         );
@@ -118,7 +92,10 @@ ${message}
         const data = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
-          console.error("Gemini API error:", data);
+          console.error("Gemini API error:", {
+            status: geminiResponse.status,
+            data
+          });
 
           return new Response(
             JSON.stringify({
@@ -140,6 +117,8 @@ ${message}
             .trim();
 
         if (!answer) {
+          console.error("Gemini returned no usable text:", data);
+
           return new Response(
             JSON.stringify({
               error: "The AI service returned an empty response."
@@ -181,7 +160,8 @@ ${message}
       }
     }
 
-    // Serve the Tabing Guhit website.
+    // Keep serving the existing Tabing Guhit website.
     return env.ASSETS.fetch(request);
   }
 };
+```
