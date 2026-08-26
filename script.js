@@ -13,11 +13,15 @@ const clearWorthButton =
   document.getElementById("clearWorth");
 
 
+/* =========================================================
+   CALCULATE KNOW YOUR WORTH
+   ========================================================= */
+
 if (worthForm && worthResult) {
 
   worthForm.addEventListener(
     "submit",
-    function (event) {
+    async function (event) {
 
       event.preventDefault();
 
@@ -25,20 +29,24 @@ if (worthForm && worthResult) {
       const startingCurrency =
         document.getElementById(
           "startingCurrency"
-        ).value;
+        )?.value
+        ?.trim()
+        ?.toUpperCase();
 
 
       const targetCurrency =
         document.getElementById(
           "targetCurrency"
-        ).value;
+        )?.value
+        ?.trim()
+        ?.toUpperCase();
 
 
       const hourly =
         Number(
           document.getElementById(
             "hourlyAmount"
-          ).value
+          )?.value
         );
 
 
@@ -46,7 +54,7 @@ if (worthForm && worthResult) {
         Number(
           document.getElementById(
             "hoursPerDay"
-          ).value
+          )?.value
         );
 
 
@@ -54,7 +62,7 @@ if (worthForm && worthResult) {
         Number(
           document.getElementById(
             "daysPerWeek"
-          ).value
+          )?.value
         );
 
 
@@ -62,11 +70,17 @@ if (worthForm && worthResult) {
         Number(
           document.getElementById(
             "monthsPerYear"
-          ).value
+          )?.value
         );
 
 
+      /* =====================================================
+         VALIDATE INPUTS
+         ===================================================== */
+
       if (
+        !startingCurrency ||
+        !targetCurrency ||
         !Number.isFinite(hourly) ||
         hourly < 0 ||
         !Number.isFinite(hoursPerDay) ||
@@ -86,8 +100,9 @@ if (worthForm && worthResult) {
           <h3>Please check your numbers.</h3>
 
           <p>
-            Hours per day, days per week, and months per year
-            must contain valid positive values.
+            Please enter valid values for your currencies,
+            hourly rate, hours per day, days per week,
+            and months per year.
           </p>
         `;
 
@@ -95,6 +110,10 @@ if (worthForm && worthResult) {
         return;
       }
 
+
+      /* =====================================================
+         CALCULATE BASE EARNINGS
+         ===================================================== */
 
       const daily =
         hourly * hoursPerDay;
@@ -104,6 +123,10 @@ if (worthForm && worthResult) {
         daily * daysPerWeek;
 
 
+      /*
+        Monthly estimate uses 52 weeks / 12 months.
+      */
+
       const monthly =
         weekly * 52 / 12;
 
@@ -112,12 +135,9 @@ if (worthForm && worthResult) {
         weekly * 52;
 
 
-      /*
-        SAME CURRENCY
-
-        If the user selects the same starting and target
-        currency, no exchange-rate service is required.
-      */
+      /* =====================================================
+         SAME CURRENCY
+         ===================================================== */
 
       if (
         startingCurrency === targetCurrency
@@ -131,15 +151,13 @@ if (worthForm && worthResult) {
 
         displayWorthResults(
           symbol,
-          symbol,
           hourly,
           daily,
           weekly,
           monthly,
           annual,
           startingCurrency,
-          targetCurrency,
-          true
+          targetCurrency
         );
 
 
@@ -147,19 +165,159 @@ if (worthForm && worthResult) {
       }
 
 
-      /*
-        DIFFERENT CURRENCIES
-
-        We do NOT invent or estimate an exchange rate.
-
-        Until a real exchange-rate API is connected,
-        show the calculated earnings in the original
-        starting currency.
-      */
+      /* =====================================================
+         CHECK EXCHANGE-RATE CONFIGURATION
+         ===================================================== */
 
       if (
+        typeof CONFIG === "undefined" ||
         !CONFIG.EXCHANGE_RATES_ENABLED
       ) {
+
+        showConversionUnavailable(
+          startingCurrency,
+          targetCurrency,
+          hourly,
+          daily,
+          weekly,
+          monthly,
+          annual
+        );
+
+
+        return;
+      }
+
+
+      /* =====================================================
+         SHOW LOADING STATE
+         ===================================================== */
+
+      worthResult.classList.remove(
+        "hidden"
+      );
+
+
+      worthResult.innerHTML = `
+        <h3>Calculating your earnings...</h3>
+
+        <p>
+          Getting the latest available exchange rate
+          for <strong>${startingCurrency}</strong>
+          → <strong>${targetCurrency}</strong>.
+        </p>
+      `;
+
+
+      worthResult.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest"
+      });
+
+
+      /* =====================================================
+         REQUEST REAL EXCHANGE RATE
+         ===================================================== */
+
+      try {
+
+        const endpoint =
+          (
+            typeof CONFIG !== "undefined" &&
+            CONFIG.AI_ENDPOINT
+          )
+            ? CONFIG.AI_ENDPOINT
+                .replace("/api/chat", "/api/exchange-rate")
+            : "/api/exchange-rate";
+
+
+        const exchangeUrl =
+          `${endpoint}?from=${encodeURIComponent(
+            startingCurrency
+          )}&to=${encodeURIComponent(
+            targetCurrency
+          )}`;
+
+
+        const response =
+          await fetch(
+            exchangeUrl,
+            {
+              method: "GET",
+              headers: {
+                "Accept":
+                  "application/json"
+              }
+            }
+          );
+
+
+        let data = null;
+
+
+        try {
+
+          data =
+            await response.json();
+
+        } catch (jsonError) {
+
+          data = null;
+
+        }
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data?.error ||
+            "The exchange-rate service is unavailable."
+          );
+
+        }
+
+
+        const rate =
+          Number(
+            data?.rate
+          );
+
+
+        if (
+          !Number.isFinite(rate) ||
+          rate <= 0
+        ) {
+
+          throw new Error(
+            "No valid exchange rate was returned."
+          );
+
+        }
+
+
+        /* ===================================================
+           APPLY REAL EXCHANGE RATE
+           =================================================== */
+
+        const convertedHourly =
+          hourly * rate;
+
+
+        const convertedDaily =
+          daily * rate;
+
+
+        const convertedWeekly =
+          weekly * rate;
+
+
+        const convertedMonthly =
+          monthly * rate;
+
+
+        const convertedAnnual =
+          annual * rate;
+
 
         const startingSymbol =
           getCurrencySymbol(
@@ -167,47 +325,23 @@ if (worthForm && worthResult) {
           );
 
 
+        const targetSymbol =
+          getCurrencySymbol(
+            targetCurrency
+          );
+
+
+        /* ===================================================
+           DISPLAY CONVERTED RESULTS
+           =================================================== */
+
         worthResult.classList.remove(
           "hidden"
         );
 
 
         worthResult.innerHTML = `
-          <h3>Conversion is not available yet.</h3>
-
-          <p>
-            Your earnings have been calculated in
-            <strong>${startingCurrency}</strong>,
-            but a live exchange-rate service has not been configured.
-          </p>
-
-          <div class="earnings-list">
-
-            <p>
-              <strong>Estimated earnings:</strong>
-            </p>
-
-            <p>
-              <strong>Daily:</strong>
-              ${startingSymbol}${formatNumber(daily)}
-            </p>
-
-            <p>
-              <strong>Weekly:</strong>
-              ${startingSymbol}${formatNumber(weekly)}
-            </p>
-
-            <p>
-              <strong>Monthly:</strong>
-              ${startingSymbol}${formatNumber(monthly)}
-            </p>
-
-            <p>
-              <strong>Annually:</strong>
-              ${startingSymbol}${formatNumber(annual)}
-            </p>
-
-          </div>
+          <h3>Earnings Estimate</h3>
 
           <p>
             <strong>Starting Currency:</strong>
@@ -219,16 +353,91 @@ if (worthForm && worthResult) {
             ${targetCurrency}
           </p>
 
-          <p>
-            No exchange rate has been estimated or invented.
-            Please try again later or select the same
-            starting and target currency.
+          <div class="earnings-list">
+
+            <p>
+              <strong>Hourly Earnings:</strong>
+              ${targetSymbol}${formatNumber(
+                convertedHourly
+              )}
+            </p>
+
+            <p>
+              <strong>Daily Earnings:</strong>
+              ${targetSymbol}${formatNumber(
+                convertedDaily
+              )}
+            </p>
+
+            <p>
+              <strong>Weekly Earnings:</strong>
+              ${targetSymbol}${formatNumber(
+                convertedWeekly
+              )}
+            </p>
+
+            <p>
+              <strong>Monthly Earnings:</strong>
+              ${targetSymbol}${formatNumber(
+                convertedMonthly
+              )}
+            </p>
+
+            <p>
+              <strong>Annual Earnings:</strong>
+              ${targetSymbol}${formatNumber(
+                convertedAnnual
+              )}
+            </p>
+
+          </div>
+
+          <p class="small-note">
+            Exchange rate used:
+            <strong>
+              1 ${startingCurrency}
+              =
+              ${formatNumber(rate, 6)}
+              ${targetCurrency}
+            </strong>
+          </p>
+
+          ${
+            data?.date
+              ? `
+                <p class="small-note">
+                  Exchange-rate date:
+                  <strong>${data.date}</strong>
+                </p>
+              `
+              : ""
+          }
+
+          <p class="small-note">
+            Rates are provided by the connected
+            exchange-rate service and may change over time.
           </p>
         `;
 
 
+        /* ===================================================
+           GA4 TRACKING
+           =================================================== */
+
         trackEvent(
-          "currency_conversion_unavailable",
+          "worth_calculated",
+          {
+            starting_currency:
+              startingCurrency,
+
+            target_currency:
+              targetCurrency
+          }
+        );
+
+
+        trackEvent(
+          "currency_conversion_success",
           {
             starting_currency:
               startingCurrency,
@@ -244,104 +453,108 @@ if (worthForm && worthResult) {
           block: "nearest"
         });
 
+      } catch (error) {
 
-        return;
-      }
-
-
-      /*
-        IMPORTANT:
-
-        EXCHANGE_RATES_ENABLED is true, but no actual
-        exchange-rate API is currently connected.
-
-        Therefore we still must not invent a conversion.
-
-        Show the earnings in the starting currency and
-        clearly explain that live conversion is pending.
-      */
-
-      const startingSymbol =
-        getCurrencySymbol(
-          startingCurrency
+        console.error(
+          "Currency conversion error:",
+          error
         );
 
 
-      worthResult.classList.remove(
-        "hidden"
-      );
+        /* ===================================================
+           SHOW ORIGINAL-CURRENCY RESULTS
+           WITHOUT INVENTING A RATE
+           =================================================== */
+
+        const startingSymbol =
+          getCurrencySymbol(
+            startingCurrency
+          );
 
 
-      worthResult.innerHTML = `
-        <h3>Earnings Estimate</h3>
+        worthResult.classList.remove(
+          "hidden"
+        );
 
-        <p>
-          Your earnings have been calculated in
-          <strong>${startingCurrency}</strong>.
-        </p>
 
-        <div class="earnings-list">
+        worthResult.innerHTML = `
+          <h3>Live conversion is unavailable.</h3>
 
           <p>
-            <strong>Hourly:</strong>
-            ${startingSymbol}${formatNumber(hourly)}
+            We could not retrieve a valid exchange rate
+            for <strong>${startingCurrency}</strong>
+            → <strong>${targetCurrency}</strong>.
           </p>
 
           <p>
-            <strong>Daily:</strong>
-            ${startingSymbol}${formatNumber(daily)}
+            Your earnings were calculated safely in your
+            starting currency below.
           </p>
 
-          <p>
-            <strong>Weekly:</strong>
-            ${startingSymbol}${formatNumber(weekly)}
+          <div class="earnings-list">
+
+            <p>
+              <strong>Hourly:</strong>
+              ${startingSymbol}${formatNumber(
+                hourly
+              )}
+            </p>
+
+            <p>
+              <strong>Daily:</strong>
+              ${startingSymbol}${formatNumber(
+                daily
+              )}
+            </p>
+
+            <p>
+              <strong>Weekly:</strong>
+              ${startingSymbol}${formatNumber(
+                weekly
+              )}
+            </p>
+
+            <p>
+              <strong>Monthly:</strong>
+              ${startingSymbol}${formatNumber(
+                monthly
+              )}
+            </p>
+
+            <p>
+              <strong>Annually:</strong>
+              ${startingSymbol}${formatNumber(
+                annual
+              )}
+            </p>
+
+          </div>
+
+          <p class="small-note">
+            No exchange rate has been estimated or invented.
+            Please try again later.
           </p>
-
-          <p>
-            <strong>Monthly:</strong>
-            ${startingSymbol}${formatNumber(monthly)}
-          </p>
-
-          <p>
-            <strong>Annually:</strong>
-            ${startingSymbol}${formatNumber(annual)}
-          </p>
-
-        </div>
-
-        <p>
-          <strong>Starting Currency:</strong>
-          ${startingCurrency}
-        </p>
-
-        <p>
-          <strong>Target Currency:</strong>
-          ${targetCurrency}
-        </p>
-
-        <p class="small-note">
-          Live currency conversion is not available yet.
-          No exchange rate has been estimated or invented.
-        </p>
-      `;
+        `;
 
 
-      trackEvent(
-        "currency_conversion_pending",
-        {
-          starting_currency:
-            startingCurrency,
+        trackEvent(
+          "currency_conversion_error",
+          {
+            starting_currency:
+              startingCurrency,
 
-          target_currency:
-            targetCurrency
-        }
-      );
+            target_currency:
+              targetCurrency
+          }
+        );
 
 
-      worthResult.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest"
-      });
+        worthResult.scrollIntoView({
+          behavior: "smooth",
+          block: "nearest"
+        });
+
+      }
 
     }
   );
@@ -350,20 +563,18 @@ if (worthForm && worthResult) {
 
 
 /* =========================================================
-   DISPLAY SAME-CURRENCY WORTH RESULTS
+   DISPLAY SAME-CURRENCY RESULTS
    ========================================================= */
 
 function displayWorthResults(
-  startingSymbol,
-  targetSymbol,
+  symbol,
   hourly,
   daily,
   weekly,
   monthly,
   annual,
   startingCurrency,
-  targetCurrency,
-  sameCurrency
+  targetCurrency
 ) {
 
   worthResult.classList.remove(
@@ -388,33 +599,33 @@ function displayWorthResults(
 
       <p>
         <strong>Hourly Earnings:</strong>
-        ${startingSymbol}${formatNumber(hourly)}
+        ${symbol}${formatNumber(hourly)}
       </p>
 
       <p>
         <strong>Daily Earnings:</strong>
-        ${startingSymbol}${formatNumber(daily)}
+        ${symbol}${formatNumber(daily)}
       </p>
 
       <p>
         <strong>Weekly Earnings:</strong>
-        ${startingSymbol}${formatNumber(weekly)}
+        ${symbol}${formatNumber(weekly)}
       </p>
 
       <p>
         <strong>Monthly Earnings:</strong>
-        ${startingSymbol}${formatNumber(monthly)}
+        ${symbol}${formatNumber(monthly)}
       </p>
 
       <p>
         <strong>Annual Earnings:</strong>
-        ${startingSymbol}${formatNumber(annual)}
+        ${symbol}${formatNumber(annual)}
       </p>
 
     </div>
 
     <p class="small-note">
-      Starting and target currencies are currently the same,
+      Starting and target currencies are the same,
       so no conversion was necessary.
     </p>
   `;
@@ -423,7 +634,11 @@ function displayWorthResults(
   trackEvent(
     "worth_calculated",
     {
-      currency: startingCurrency
+      starting_currency:
+        startingCurrency,
+
+      target_currency:
+        targetCurrency
     }
   );
 
@@ -437,7 +652,106 @@ function displayWorthResults(
 
 
 /* =========================================================
-   CLEAR WORTH
+   CONVERSION UNAVAILABLE
+   ========================================================= */
+
+function showConversionUnavailable(
+  startingCurrency,
+  targetCurrency,
+  hourly,
+  daily,
+  weekly,
+  monthly,
+  annual
+) {
+
+  const startingSymbol =
+    getCurrencySymbol(
+      startingCurrency
+    );
+
+
+  worthResult.classList.remove(
+    "hidden"
+  );
+
+
+  worthResult.innerHTML = `
+    <h3>Conversion is not available yet.</h3>
+
+    <p>
+      Your earnings have been calculated in
+      <strong>${startingCurrency}</strong>.
+    </p>
+
+    <div class="earnings-list">
+
+      <p>
+        <strong>Hourly:</strong>
+        ${startingSymbol}${formatNumber(hourly)}
+      </p>
+
+      <p>
+        <strong>Daily:</strong>
+        ${startingSymbol}${formatNumber(daily)}
+      </p>
+
+      <p>
+        <strong>Weekly:</strong>
+        ${startingSymbol}${formatNumber(weekly)}
+      </p>
+
+      <p>
+        <strong>Monthly:</strong>
+        ${startingSymbol}${formatNumber(monthly)}
+      </p>
+
+      <p>
+        <strong>Annually:</strong>
+        ${startingSymbol}${formatNumber(annual)}
+      </p>
+
+    </div>
+
+    <p>
+      <strong>Starting Currency:</strong>
+      ${startingCurrency}
+    </p>
+
+    <p>
+      <strong>Target Currency:</strong>
+      ${targetCurrency}
+    </p>
+
+    <p class="small-note">
+      No exchange rate has been estimated or invented.
+      Please try again later.
+    </p>
+  `;
+
+
+  trackEvent(
+    "currency_conversion_unavailable",
+    {
+      starting_currency:
+        startingCurrency,
+
+      target_currency:
+        targetCurrency
+    }
+  );
+
+
+  worthResult.scrollIntoView({
+    behavior: "smooth",
+    block: "nearest"
+  });
+
+}
+
+
+/* =========================================================
+   CLEAR KNOW YOUR WORTH
    ========================================================= */
 
 if (clearWorthButton) {
@@ -447,7 +761,9 @@ if (clearWorthButton) {
     function () {
 
       if (worthForm) {
+
         worthForm.reset();
+
       }
 
 
