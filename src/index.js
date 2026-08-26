@@ -1,3 +1,4 @@
+```js
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -22,7 +23,6 @@ export default {
       }
 
       try {
-        // Read request
         const body = await request.json();
         const message = String(body?.message || "").trim();
 
@@ -40,11 +40,9 @@ export default {
           );
         }
 
-        // Check Gemini API secret
+        // The API key must come from the Cloudflare Secret.
         if (!env.GEMINI_API_KEY) {
-          console.error(
-            "AI Co-Pilot error: GEMINI_API_KEY is missing."
-          );
+          console.error("GEMINI_API_KEY is missing.");
 
           return new Response(
             JSON.stringify({
@@ -59,7 +57,6 @@ export default {
           );
         }
 
-        // AI instructions
         const systemInstruction =
           "You are the AI Co-Pilot for Tabing Guhit, " +
           "a free digital toolbox for career exploration, " +
@@ -74,12 +71,6 @@ export default {
           "For specialized medical, legal, or financial matters, " +
           "encourage the user to consult a qualified professional.";
 
-        const prompt =
-          systemInstruction +
-          "\n\nUser question:\n" +
-          message;
-
-        // Call Gemini
         const geminiResponse = await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
           {
@@ -91,12 +82,20 @@ export default {
             },
 
             body: JSON.stringify({
+              systemInstruction: {
+                parts: [
+                  {
+                    text: systemInstruction
+                  }
+                ]
+              },
+
               contents: [
                 {
                   role: "user",
                   parts: [
                     {
-                      text: prompt
+                      text: message
                     }
                   ]
                 }
@@ -110,25 +109,16 @@ export default {
           }
         );
 
-        // Read Gemini response
         const data = await geminiResponse.json();
 
-        // Handle Gemini API errors
         if (!geminiResponse.ok) {
-          console.error(
-            "Gemini API request failed:",
-            {
-              status: geminiResponse.status,
-              statusText: geminiResponse.statusText,
-              data: data
-            }
-          );
+          console.error("Gemini API error:", data);
 
           return new Response(
             JSON.stringify({
               error:
                 data?.error?.message ||
-                "The AI service could not respond right now."
+                "The Gemini AI service could not respond."
             }),
             {
               status: 502,
@@ -139,24 +129,18 @@ export default {
           );
         }
 
-        // Extract generated answer
         const answer =
           data?.candidates?.[0]?.content?.parts
             ?.map((part) => part?.text || "")
             .join("")
             .trim();
 
-        // Handle empty response
         if (!answer) {
-          console.error(
-            "Gemini returned no usable answer:",
-            data
-          );
+          console.error("Gemini returned an empty response:", data);
 
           return new Response(
             JSON.stringify({
-              error:
-                "The AI service returned an empty response."
+              error: "The AI service returned an empty response."
             }),
             {
               status: 502,
@@ -167,7 +151,6 @@ export default {
           );
         }
 
-        // Successful response
         return new Response(
           JSON.stringify({
             response: answer
@@ -181,15 +164,11 @@ export default {
         );
 
       } catch (error) {
-        console.error(
-          "AI Co-Pilot Worker error:",
-          error
-        );
+        console.error("AI Co-Pilot Worker error:", error);
 
         return new Response(
           JSON.stringify({
-            error:
-              "Unable to process the AI request."
+            error: "Unable to process the AI request."
           }),
           {
             status: 500,
@@ -208,3 +187,4 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
+```
