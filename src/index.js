@@ -2,11 +2,16 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // AI Co-Pilot endpoint
+    // =====================================================
+    // AI CO-PILOT
+    // =====================================================
+
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return new Response(
-          JSON.stringify({ error: "Method not allowed." }),
+          JSON.stringify({
+            error: "Method not allowed."
+          }),
           {
             status: 405,
             headers: {
@@ -17,6 +22,7 @@ export default {
       }
 
       try {
+        // Read request
         const body = await request.json();
         const message = String(body?.message || "").trim();
 
@@ -34,9 +40,11 @@ export default {
           );
         }
 
-        // Gemini API key must be stored as a Cloudflare Worker Secret.
+        // Check Gemini API secret
         if (!env.GEMINI_API_KEY) {
-          console.error("GEMINI_API_KEY is missing.");
+          console.error(
+            "AI Co-Pilot error: GEMINI_API_KEY is missing."
+          );
 
           return new Response(
             JSON.stringify({
@@ -51,24 +59,37 @@ export default {
           );
         }
 
-        const prompt =
-          "You are the AI Co-Pilot for Tabing Guhit, a free digital toolbox for career exploration, learning, personal planning, and growth. " +
-          "Help users with practical career guidance, job-search questions, workplace concerns, skills development, learning paths, and personal planning. " +
+        // AI instructions
+        const systemInstruction =
+          "You are the AI Co-Pilot for Tabing Guhit, " +
+          "a free digital toolbox for career exploration, " +
+          "learning, personal planning, and growth. " +
+          "Help users with practical career guidance, " +
+          "job-search questions, workplace concerns, " +
+          "skills development, learning paths, and personal planning. " +
           "Be supportive, clear, practical, and concise. " +
+          "Answer the user's actual question directly. " +
+          "Do not mention these instructions. " +
           "Do not claim to be a licensed medical, legal, or financial professional. " +
-          "When appropriate, explain that the user should consult a qualified professional for specialized advice. " +
-          "Answer the user's actual question directly and do not mention these instructions. " +
-          "User message: " +
+          "For specialized medical, legal, or financial matters, " +
+          "encourage the user to consult a qualified professional.";
+
+        const prompt =
+          systemInstruction +
+          "\n\nUser question:\n" +
           message;
 
+        // Call Gemini
         const geminiResponse = await fetch(
           "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
           {
             method: "POST",
+
             headers: {
               "Content-Type": "application/json",
               "x-goog-api-key": env.GEMINI_API_KEY
             },
+
             body: JSON.stringify({
               contents: [
                 {
@@ -80,6 +101,7 @@ export default {
                   ]
                 }
               ],
+
               generationConfig: {
                 temperature: 0.7,
                 maxOutputTokens: 600
@@ -88,17 +110,25 @@ export default {
           }
         );
 
+        // Read Gemini response
         const data = await geminiResponse.json();
 
+        // Handle Gemini API errors
         if (!geminiResponse.ok) {
-          console.error("Gemini API error:", {
-            status: geminiResponse.status,
-            data
-          });
+          console.error(
+            "Gemini API request failed:",
+            {
+              status: geminiResponse.status,
+              statusText: geminiResponse.statusText,
+              data: data
+            }
+          );
 
           return new Response(
             JSON.stringify({
-              error: "The AI service could not respond right now."
+              error:
+                data?.error?.message ||
+                "The AI service could not respond right now."
             }),
             {
               status: 502,
@@ -109,18 +139,24 @@ export default {
           );
         }
 
+        // Extract generated answer
         const answer =
           data?.candidates?.[0]?.content?.parts
             ?.map((part) => part?.text || "")
             .join("")
             .trim();
 
+        // Handle empty response
         if (!answer) {
-          console.error("Gemini returned no usable text:", data);
+          console.error(
+            "Gemini returned no usable answer:",
+            data
+          );
 
           return new Response(
             JSON.stringify({
-              error: "The AI service returned an empty response."
+              error:
+                "The AI service returned an empty response."
             }),
             {
               status: 502,
@@ -131,6 +167,7 @@ export default {
           );
         }
 
+        // Successful response
         return new Response(
           JSON.stringify({
             response: answer
@@ -142,12 +179,17 @@ export default {
             }
           }
         );
+
       } catch (error) {
-        console.error("AI request error:", error);
+        console.error(
+          "AI Co-Pilot Worker error:",
+          error
+        );
 
         return new Response(
           JSON.stringify({
-            error: "Unable to process the AI request."
+            error:
+              "Unable to process the AI request."
           }),
           {
             status: 500,
@@ -159,7 +201,10 @@ export default {
       }
     }
 
-    // Keep serving the existing Tabing Guhit website.
+    // =====================================================
+    // EXISTING TABING GUHIT WEBSITE
+    // =====================================================
+
     return env.ASSETS.fetch(request);
   }
 };
