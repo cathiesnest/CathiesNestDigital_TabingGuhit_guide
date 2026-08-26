@@ -1,3 +1,4 @@
+```javascript
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -177,9 +178,117 @@ export default {
     }
 
     // =====================================================
+    // CURRENCY CONVERSION API
+    // =====================================================
+
+    if (url.pathname === "/api/exchange-rate") {
+      if (request.method !== "GET") {
+        return new Response(
+          JSON.stringify({
+            error: "Method not allowed."
+          }),
+          {
+            status: 405,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
+
+      try {
+        const from = (
+          url.searchParams.get("from") || "USD"
+        ).toUpperCase();
+
+        const to = (
+          url.searchParams.get("to") || "PHP"
+        ).toUpperCase();
+
+        if (from === to) {
+          return new Response(
+            JSON.stringify({
+              from,
+              to,
+              rate: 1
+            }),
+            {
+              status: 200,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        const rateResponse = await fetch(
+          `https://api.frankfurter.app/latest?from=${encodeURIComponent(
+            from
+          )}&to=${encodeURIComponent(to)}`
+        );
+
+        const rateData = await rateResponse.json();
+
+        if (!rateResponse.ok || !rateData?.rates?.[to]) {
+          console.error(
+            "Exchange-rate request failed:",
+            rateData
+          );
+
+          return new Response(
+            JSON.stringify({
+              error:
+                "A live exchange rate could not be retrieved."
+            }),
+            {
+              status: 502,
+              headers: {
+                "Content-Type": "application/json"
+              }
+            }
+          );
+        }
+
+        return new Response(
+          JSON.stringify({
+            from,
+            to,
+            rate: rateData.rates[to],
+            date: rateData.date
+          }),
+          {
+            status: 200,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      } catch (error) {
+        console.error(
+          "Exchange-rate Worker error:",
+          error
+        );
+
+        return new Response(
+          JSON.stringify({
+            error:
+              "Unable to retrieve the exchange rate right now."
+          }),
+          {
+            status: 502,
+            headers: {
+              "Content-Type": "application/json"
+            }
+          }
+        );
+      }
+    }
+
+    // =====================================================
     // EXISTING TABING GUHIT WEBSITE
     // =====================================================
 
     return env.ASSETS.fetch(request);
   }
 };
+```
