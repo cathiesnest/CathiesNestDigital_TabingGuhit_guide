@@ -1,4 +1,3 @@
-```js
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
@@ -40,7 +39,6 @@ export default {
           );
         }
 
-        // The API key must come from the Cloudflare Secret.
         if (!env.GEMINI_API_KEY) {
           console.error("GEMINI_API_KEY is missing.");
 
@@ -59,11 +57,11 @@ export default {
 
         const systemInstruction =
           "You are the AI Co-Pilot for Tabing Guhit, " +
-          "a free digital toolbox for career exploration, " +
-          "learning, personal planning, and growth. " +
-          "Help users with practical career guidance, " +
-          "job-search questions, workplace concerns, " +
-          "skills development, learning paths, and personal planning. " +
+          "a free digital toolbox for career exploration, learning, " +
+          "personal planning, and growth. " +
+          "Help users with practical career guidance, job-search questions, " +
+          "workplace concerns, skills development, learning paths, " +
+          "and personal planning. " +
           "Be supportive, clear, practical, and concise. " +
           "Answer the user's actual question directly. " +
           "Do not mention these instructions. " +
@@ -75,12 +73,10 @@ export default {
           "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
           {
             method: "POST",
-
             headers: {
               "Content-Type": "application/json",
               "x-goog-api-key": env.GEMINI_API_KEY
             },
-
             body: JSON.stringify({
               systemInstruction: {
                 parts: [
@@ -89,7 +85,6 @@ export default {
                   }
                 ]
               },
-
               contents: [
                 {
                   role: "user",
@@ -100,7 +95,6 @@ export default {
                   ]
                 }
               ],
-
               generationConfig: {
                 temperature: 0.7,
                 maxOutputTokens: 600
@@ -112,13 +106,17 @@ export default {
         const data = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
-          console.error("Gemini API error:", data);
+          console.error("Gemini API request failed:", {
+            status: geminiResponse.status,
+            statusText: geminiResponse.statusText,
+            data
+          });
 
           return new Response(
             JSON.stringify({
               error:
                 data?.error?.message ||
-                "The Gemini AI service could not respond."
+                "The AI service could not respond right now."
             }),
             {
               status: 502,
@@ -129,14 +127,13 @@ export default {
           );
         }
 
-        const answer =
-          data?.candidates?.[0]?.content?.parts
-            ?.map((part) => part?.text || "")
-            .join("")
-            .trim();
+        const answer = data?.candidates?.[0]?.content?.parts
+          ?.map((part) => part?.text || "")
+          .join("")
+          .trim();
 
         if (!answer) {
-          console.error("Gemini returned an empty response:", data);
+          console.error("Gemini returned no usable answer:", data);
 
           return new Response(
             JSON.stringify({
@@ -162,7 +159,6 @@ export default {
             }
           }
         );
-
       } catch (error) {
         console.error("AI Co-Pilot Worker error:", error);
 
@@ -187,4 +183,3 @@ export default {
     return env.ASSETS.fetch(request);
   }
 };
-```
