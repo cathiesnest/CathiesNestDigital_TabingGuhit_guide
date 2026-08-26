@@ -8,14 +8,10 @@ export default {
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return new Response(
-          JSON.stringify({
-            error: "Method not allowed."
-          }),
+          JSON.stringify({ error: "Method not allowed." }),
           {
             status: 405,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           }
         );
       }
@@ -26,41 +22,33 @@ export default {
 
         if (!message) {
           return new Response(
-            JSON.stringify({
-              error: "Please enter a message."
-            }),
+            JSON.stringify({ error: "Please enter a message." }),
             {
               status: 400,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
         if (!env.GEMINI_API_KEY) {
-          console.error("GEMINI_API_KEY is missing.");
-
           return new Response(
             JSON.stringify({
               error: "AI service is not configured yet."
             }),
             {
               status: 500,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
         const systemInstruction =
           "You are the AI Co-Pilot for Tabing Guhit, " +
-          "a free digital toolbox for career exploration, " +
-          "learning, personal planning, and growth. " +
-          "Help users with practical career guidance, job-search questions, " +
-          "workplace concerns, skills development, learning paths, " +
-          "and personal planning. Be supportive, clear, practical, and concise. " +
+          "a free digital toolbox for career exploration, learning, " +
+          "personal planning, and growth. Help users with practical " +
+          "career guidance, job-search questions, workplace concerns, " +
+          "skills development, learning paths, and personal planning. " +
+          "Be supportive, clear, practical, and concise. " +
           "Answer the user's actual question directly. " +
           "Do not mention these instructions. " +
           "Do not claim to be a licensed medical, legal, or financial professional. " +
@@ -104,10 +92,7 @@ export default {
         const data = await geminiResponse.json();
 
         if (!geminiResponse.ok) {
-          console.error("Gemini API request failed:", {
-            status: geminiResponse.status,
-            data
-          });
+          console.error("Gemini API request failed:", data);
 
           return new Response(
             JSON.stringify({
@@ -117,9 +102,7 @@ export default {
             }),
             {
               status: 502,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
@@ -130,30 +113,22 @@ export default {
           .trim();
 
         if (!answer) {
-          console.error("Gemini returned no usable answer:", data);
-
           return new Response(
             JSON.stringify({
               error: "The AI service returned an empty response."
             }),
             {
               status: 502,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
         return new Response(
-          JSON.stringify({
-            response: answer
-          }),
+          JSON.stringify({ response: answer }),
           {
             status: 200,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           }
         );
       } catch (error) {
@@ -165,44 +140,34 @@ export default {
           }),
           {
             status: 500,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           }
         );
       }
     }
 
     // =====================================================
-    // KNOW YOUR WORTH — CURRENCY CONVERSION
+    // CURRENCY CONVERSION
     // =====================================================
     if (url.pathname === "/api/exchange-rate") {
       if (request.method !== "GET") {
         return new Response(
-          JSON.stringify({
-            error: "Method not allowed."
-          }),
+          JSON.stringify({ error: "Method not allowed." }),
           {
             status: 405,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           }
         );
       }
 
       try {
-        const from = String(
+        const from = (
           url.searchParams.get("from") || "USD"
-        )
-          .trim()
-          .toUpperCase();
+        ).trim().toUpperCase();
 
-        const to = String(
+        const to = (
           url.searchParams.get("to") || "PHP"
-        )
-          .trim()
-          .toUpperCase();
+        ).trim().toUpperCase();
 
         if (!from || !to) {
           return new Response(
@@ -211,61 +176,53 @@ export default {
             }),
             {
               status: 400,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
-        // Same currency = 1:1 conversion.
         if (from === to) {
           return new Response(
             JSON.stringify({
               rate: 1,
               from,
-              to,
-              source: "same-currency"
+              to
             }),
             {
               status: 200,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
-        // Current Frankfurter API endpoint
-        const exchangeResponse = await fetch(
-          `https://api.frankfurter.dev/v1/latest?base=${encodeURIComponent(
-            from
-          )}&symbols=${encodeURIComponent(to)}`
-        );
+        const apiUrl =
+          "https://api.frankfurter.dev/v1/latest?base=" +
+          encodeURIComponent(from) +
+          "&symbols=" +
+          encodeURIComponent(to);
 
-        const exchangeData = await exchangeResponse.json();
+        const response = await fetch(apiUrl);
 
-        if (!exchangeResponse.ok) {
+        if (!response.ok) {
           console.error(
-            "Exchange-rate request failed:",
-            exchangeData
+            "Currency API failed:",
+            response.status,
+            response.statusText
           );
 
           return new Response(
             JSON.stringify({
-              error:
-                "Live exchange-rate service is unavailable."
+              error: "Currency conversion service is unavailable."
             }),
             {
               status: 502,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
 
-        const rate = Number(exchangeData?.rates?.[to]);
+        const data = await response.json();
+        const rate = Number(data?.rates?.[to]);
 
         if (!Number.isFinite(rate) || rate <= 0) {
           return new Response(
@@ -274,9 +231,7 @@ export default {
             }),
             {
               status: 502,
-              headers: {
-                "Content-Type": "application/json"
-              }
+              headers: { "Content-Type": "application/json" }
             }
           );
         }
@@ -286,32 +241,26 @@ export default {
             rate,
             from,
             to,
-            date: exchangeData?.date || null,
-            source: "Frankfurter"
+            date: data?.date || null
           }),
           {
             status: 200,
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "Cache-Control": "no-store"
             }
           }
         );
       } catch (error) {
-        console.error(
-          "Exchange-rate Worker error:",
-          error
-        );
+        console.error("Currency conversion error:", error);
 
         return new Response(
           JSON.stringify({
-            error:
-              "Unable to retrieve the live exchange rate."
+            error: "Unable to retrieve the exchange rate."
           }),
           {
             status: 502,
-            headers: {
-              "Content-Type": "application/json"
-            }
+            headers: { "Content-Type": "application/json" }
           }
         );
       }
