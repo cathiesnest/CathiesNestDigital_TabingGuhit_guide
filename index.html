@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Tabing Guhit — a simple, free digital toolbox by CathiesNest Digital for career exploration, learning, personal planning, and growth.">
+  <title>Tabing Guhit | CathiesNest Digital</title>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+  <header class="site-header">
+    <div class="container nav-container">
+
+      <a href="#home" class="brand" aria-label="Tabing Guhit Home">
+        <span class="brand-icon" aria-hidden="true">☕</span>
+        <span>
+          <strong>Tabing Guhit</strong>
+          <small>Powered by CathiesNest Digital</small>
+        </span>
+      </a>
+
+      <nav class="main-nav" aria-label="Main navigation">
+        <a href="#home">Home</a>
+        <a href="#niche">Find Your Niche</a>
+        <a href="#copilot">AI Co-Pilot</a>
+        <a href="#worth">Know Your Worth</a>
+        <a href="#financial">Financial Reset</a>
+        <a href="#courses">Free Courses</a>
+        <a href="#about">About &amp; Legal</a>
+      </nav>
+
+    </div>
+  </header>
+
+
+  <main>
+
+    <!-- HOME -->
+    <section id="home" class="hero section">
+      <div class="container hero-content">
+
+        <div class="hero-icon" aria-hidden="true">☕</div>
+
+        <p class="eyebrow">A simple digital toolbox</p>
+
+        <h1>Tabing Guhit</h1>
+
+        <p class="tagline">
+          Work with Purpose. Live with Balance. Lead with Gratitude.
+        </p>
+
+        <p class="hero-description">
+          Simple tools and resources for career exploration, learning,
+          personal development, income planning, and personal growth.
+        </p>
+
+        <div class="hero-actions">
+          <a href="#niche" class="button button-primary">Find Your Niche</a>
+          <a href="#worth" class="button button-secondary">Know Your Worth</a>
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- FIND YOUR NICHE -->
+    <section id="niche" class="section">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Explore your direction</p>
+          <h2>Find Your Niche</h2>
+          <p>
+            Answer five simple questions to explore a possible direction
+            based on your interests, strengths, goals, and preferred lifestyle.
+          </p>
+        </div>
+
+        <div class="tool-card">
+
+          <form id="nicheForm">
+
+            <div class="question">
+              <label for="nicheInterest">1. What interests you most?</label>
+              <select id="nicheInterest" required>
+                <option value="">Choose one</option>
+                <option value="creative">Creative work</option>
+                <option value="technology">Technology and digital tools</option>
+                <option value="people">Helping and supporting people</option>
+                <option value="business">Business and entrepreneurship</option>
+                <option value="organization">Organization and planning</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label for="nicheStrength">2. What is one of your strongest qualities?</label>
+              <select id="nicheStrength" required>
+                <option value="">Choose one</option>
+                <option value="creative">Creativity</option>
+                <option value="analytical">Problem-solving</option>
+                <option value="communication">Communication</option>
+                <option value="organization">Organization</option>
+                <option value="empathy">Empathy</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label for="nicheWork">3. What type of work do you prefer?</label>
+              <select id="nicheWork" required>
+                <option value="">Choose one</option>
+                <option value="independent">Independent work</option>
+                <option value="team">Team collaboration</option>
+                <option value="client">Client-focused work</option>
+                <option value="project">Project-based work</option>
+                <option value="structured">Structured work</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label for="nicheGoal">4. What is one of your main goals?</label>
+              <select id="nicheGoal" required>
+                <option value="">Choose one</option>
+                <option value="income">Increase my income</option>
+                <option value="career">Build a better career</option>
+                <option value="freelance">Start freelancing</option>
+                <option value="business">Build something of my own</option>
+                <option value="learning">Learn new skills</option>
+              </select>
+            </div>
+
+            <div class="question">
+              <label for="nicheLifestyle">5. What work environment do you prefer?</label>
+              <select id="nicheLifestyle" required>
+                <option value="">Choose one</option>
+                <option value="remote">Remote and flexible</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="office">Office-based</option>
+                <option value="flexible">Flexible schedule</option>
+                <option value="stable">Stable and predictable</option>
+              </select>
+            </div>
+
+            <div class="button-row">
+              <button type="submit" class="button button-primary">
+                Get My Result
+              </button>
+
+              <button type="button" id="clearNiche" class="button button-secondary">
+                Clear
+              </button>
+            </div>
+
+          </form>
+
+          <div id="nicheResult" class="result-box hidden" aria-live="polite"></div>
+
+          <p class="disclaimer">
+            Results are for self-reflection and general guidance only.
+            They are not professional career advice or a guarantee of employment.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- AI CO-PILOT -->
+    <section id="copilot" class="section section-alt">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Your general-purpose guide</p>
+          <h2>AI Co-Pilot</h2>
+          <p>
+            Ask general questions about work, career, learning,
+            personal development, money planning, or everyday decisions.
+          </p>
+        </div>
+
+        <div class="tool-card">
+
+          <div id="chatMessages" class="chat-messages" aria-live="polite">
+            <div class="chat-message assistant">
+              <strong>AI Co-Pilot</strong>
+              <p>
+                AI Co-Pilot is not configured yet. Please check back later.
+              </p>
+            </div>
+          </div>
+
+          <form id="chatForm" class="chat-form">
+
+            <label for="chatInput" class="sr-only">
+              Ask AI Co-Pilot a question
+            </label>
+
+            <textarea
+              id="chatInput"
+              rows="4"
+              placeholder="Ask a question..."
+              aria-label="Ask AI Co-Pilot a question"
+            ></textarea>
+
+            <div class="button-row">
+              <button type="submit" class="button button-primary">
+                Send
+              </button>
+
+              <button type="button" id="clearChat" class="button button-secondary">
+                Clear Conversation
+              </button>
+            </div>
+
+          </form>
+
+          <p class="disclaimer">
+            AI responses are for general informational and educational purposes only.
+            Do not rely on AI responses as professional, legal, medical, financial,
+            or employment advice.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- KNOW YOUR WORTH -->
+    <section id="worth" class="section">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Understand your numbers</p>
+          <h2>Know Your Worth</h2>
+          <p>
+            Estimate hourly, daily, weekly, monthly, and annual earnings
+            using your preferred currencies.
+          </p>
+        </div>
+
+        <div class="tool-card">
+
+          <form id="worthForm">
+
+            <div class="form-grid">
+
+              <div class="form-group">
+                <label for="startingCurrency">Starting Currency</label>
+                <select id="startingCurrency">
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="PHP">PHP — Philippine Peso</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="CAD">CAD — Canadian Dollar</option>
+                  <option value="AUD">AUD — Australian Dollar</option>
+                  <option value="SGD">SGD — Singapore Dollar</option>
+                  <option value="AED">AED — UAE Dirham</option>
+                  <option value="SAR">SAR — Saudi Riyal</option>
+                  <option value="JPY">JPY — Japanese Yen</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="targetCurrency">Target Currency</label>
+                <select id="targetCurrency">
+                  <option value="PHP">PHP — Philippine Peso</option>
+                  <option value="USD">USD — US Dollar</option>
+                  <option value="EUR">EUR — Euro</option>
+                  <option value="GBP">GBP — British Pound</option>
+                  <option value="CAD">CAD — Canadian Dollar</option>
+                  <option value="AUD">AUD — Australian Dollar</option>
+                  <option value="SGD">SGD — Singapore Dollar</option>
+                  <option value="AED">AED — UAE Dirham</option>
+                  <option value="SAR">SAR — Saudi Riyal</option>
+                  <option value="JPY">JPY — Japanese Yen</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="hourlyAmount">Hourly Earnings</label>
+                <input
+                  type="number"
+                  id="hourlyAmount"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter hourly amount"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="hoursPerDay">Hours / Day</label>
+                <input
+                  type="number"
+                  id="hoursPerDay"
+                  min="0"
+                  step="0.1"
+                  placeholder="8"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="daysPerWeek">Days / Week</label>
+                <input
+                  type="number"
+                  id="daysPerWeek"
+                  min="0"
+                  step="1"
+                  placeholder="5"
+                  required
+                >
+              </div>
+
+              <div class="form-group">
+                <label for="monthsPerYear">Months / Year</label>
+                <input
+                  type="number"
+                  id="monthsPerYear"
+                  min="1"
+                  max="12"
+                  step="1"
+                  value="12"
+                  required
+                >
+              </div>
+
+            </div>
+
+            <div class="button-row">
+              <button type="submit" class="button button-primary">
+                Calculate
+              </button>
+
+              <button type="button" id="clearWorth" class="button button-secondary">
+                Clear
+              </button>
+            </div>
+
+          </form>
+
+          <div id="worthResult" class="result-box hidden" aria-live="polite"></div>
+
+          <div class="quote-box">
+            <strong>
+              Don't automatically accept a low-ball offer just because you need a sideline.
+            </strong>
+            <p>
+              Starting small is okay. Undervaluing yourself is not.
+            </p>
+          </div>
+
+          <p class="disclaimer">
+            Exchange rates are estimates and may differ from current market or bank rates.
+            Results are for personal planning and reference only. Tabing Guhit does not
+            guarantee any specific income or financial outcome.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- FINANCIAL RESET -->
+    <section id="financial" class="section section-alt">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Plan with clarity</p>
+          <h2>Financial Reset</h2>
+          <p>
+            Create a simple monthly snapshot of your income and expenses.
+          </p>
+        </div>
+
+        <div class="tool-card">
+
+          <div class="form-group">
+            <label for="displayCurrency">Display Currency</label>
+            <select id="displayCurrency">
+              <option value="PHP">PHP — Philippine Peso</option>
+              <option value="USD">USD — US Dollar</option>
+              <option value="EUR">EUR — Euro</option>
+              <option value="GBP">GBP — British Pound</option>
+              <option value="CAD">CAD — Canadian Dollar</option>
+              <option value="AUD">AUD — Australian Dollar</option>
+              <option value="SGD">SGD — Singapore Dollar</option>
+              <option value="AED">AED — UAE Dirham</option>
+              <option value="SAR">SAR — Saudi Riyal</option>
+              <option value="JPY">JPY — Japanese Yen</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="monthlyIncome">Total Monthly Income</label>
+            <input
+              type="number"
+              id="monthlyIncome"
+              min="0"
+              step="0.01"
+              placeholder="Enter monthly income"
+            >
+          </div>
+
+          <div class="expense-header">
+            <h3>Monthly Expenses</h3>
+
+            <button type="button" id="addExpense" class="button button-small">
+              + Add Expense
+            </button>
+          </div>
+
+          <div id="expensesList">
+
+            <div class="expense-row">
+              <input
+                type="text"
+                class="expense-name"
+                value="Rent"
+                aria-label="Expense name"
+              >
+
+              <input
+                type="number"
+                class="expense-amount"
+                min="0"
+                step="0.01"
+                placeholder="Amount"
+                aria-label="Expense amount"
+              >
+
+              <button
+                type="button"
+                class="delete-expense"
+                aria-label="Delete Rent expense"
+                title="Delete expense"
+              >
+                🗑
+              </button>
+            </div>
+
+            <div class="expense-row">
+              <input
+                type="text"
+                class="expense-name"
+                value="Bills"
+                aria-label="Expense name"
+              >
+
+              <input
+                type="number"
+                class="expense-amount"
+                min="0"
+                step="0.01"
+                placeholder="Amount"
+                aria-label="Expense amount"
+              >
+
+              <button
+                type="button"
+                class="delete-expense"
+                aria-label="Delete Bills expense"
+                title="Delete expense"
+              >
+                🗑
+              </button>
+            </div>
+
+          </div>
+
+          <div class="button-row">
+            <button type="button" id="showBudget" class="button button-primary">
+              Show Budget Summary
+            </button>
+
+            <button type="button" id="resetBudget" class="button button-secondary">
+              Reset
+            </button>
+          </div>
+
+          <div id="budgetResult" class="result-box hidden" aria-live="polite"></div>
+
+          <p class="disclaimer">
+            Currency conversion rates are approximate and for reference only.
+            Exchange rates fluctuate. This calculator is for educational and planning
+            purposes only. Tabing Guhit is not a financial institution or licensed
+            financial adviser.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- FREE COURSES -->
+    <section id="courses" class="section">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Keep learning</p>
+          <h2>Explore Free Courses</h2>
+
+          <p>
+            Upskill, reskill, and grow — for free. Browse thousands of free courses
+            on Alison, one of the world's largest free learning platforms.
+          </p>
+        </div>
+
+        <div class="course-card">
+
+          <h3>Alison Free Courses</h3>
+
+          <p>
+            Over 5,000 free online courses covering a wide range of subjects,
+            with certificates available for eligible courses.
+          </p>
+
+          <a
+            id="alisonLink"
+            href="#"
+            class="button button-primary"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Explore Free Courses
+          </a>
+
+          <p id="alisonMessage" class="small-note"></p>
+
+        </div>
+
+      </div>
+    </section>
+
+
+    <!-- ABOUT & LEGAL -->
+    <section id="about" class="section section-alt">
+      <div class="container">
+
+        <div class="section-heading">
+          <p class="eyebrow">Transparency matters</p>
+          <h2>About &amp; Legal</h2>
+        </div>
+
+        <div class="legal-card">
+
+          <h3>Use Tabing Guhit thoughtfully.</h3>
+
+          <p>
+            Tabing Guhit is an informational and educational guide created to provide
+            simple tools and resources for learning, self-development, career
+            exploration, and personal planning.
+          </p>
+
+          <p>
+            It does not guarantee employment, clients, income, job placement,
+            or financial results.
+          </p>
+
+          <p>
+            Currency conversions and earning estimates are planning estimates only.
+            Actual payments may differ because of exchange rates, taxes, fees,
+            unpaid time, contract terms, and other circumstances.
+          </p>
+
+          <hr>
+
+          <h3>Affiliate Disclosure</h3>
+
+          <p>
+            Tabing Guhit itself is not an Alison Affiliate Partner.
+          </p>
+
+          <p>
+            The Alison link shared on this website belongs to the site's owner,
+            who is a registered Alison Affiliate Partner and may earn a commission
+            from qualifying purchases or actions, at no extra cost to you.
+          </p>
+
+          <p>
+            This is a paid referral arrangement only. It does not represent an
+            endorsement by Alison or a partnership between Tabing Guhit and Alison.
+          </p>
+
+          <p>
+            Course participation does not guarantee employment, income, or career
+            advancement. Please review the course information and make your own
+            decision before signing up.
+          </p>
+
+          <hr>
+
+          <h3>Final Disclaimer</h3>
+
+          <p>
+            <strong>Disclaimer:</strong> Tabing Guhit is not an employer, recruitment
+            agency, financial institution, or licensed financial adviser. All tools,
+            recommendations, and AI responses are for general educational and
+            self-development purposes only. Tabing Guhit does not guarantee employment,
+            income, or financial results. You remain responsible for your own decisions.
+          </p>
+
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+
+  <footer class="site-footer">
+    <div class="container">
+
+      <p>
+        <strong>☕ Tabing Guhit</strong>
+      </p>
+
+      <p>
+        © 2026 CathiesNest Digital. Free. Simple. Device-friendly.
+      </p>
+
+      <p>
+        All rights reserved.
+      </p>
+
+    </div>
+  </footer>
+
+
+  <script src="script.js"></script>
+
+</body>
+</html>
