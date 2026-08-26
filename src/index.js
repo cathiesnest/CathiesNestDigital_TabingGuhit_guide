@@ -221,12 +221,13 @@ export default {
           );
         }
 
-        const rateResponse = await fetch(
-          `https://api.frankfurter.app/latest?from=${encodeURIComponent(
-            from
-          )}&to=${encodeURIComponent(to)}`
-        );
+        const exchangeUrl =
+          "https://api.frankfurter.app/latest?from=" +
+          encodeURIComponent(from) +
+          "&to=" +
+          encodeURIComponent(to);
 
+        const rateResponse = await fetch(exchangeUrl);
         const rateData = await rateResponse.json();
 
         if (!rateResponse.ok || !rateData?.rates?.[to]) {
