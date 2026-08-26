@@ -2,11 +2,13 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // Allow the frontend to call the AI endpoint.
+    // AI Career Assistant endpoint
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return new Response(
-          JSON.stringify({ error: "Method not allowed." }),
+          JSON.stringify({
+            error: "Method not allowed."
+          }),
           {
             status: 405,
             headers: {
@@ -22,7 +24,9 @@ export default {
 
         if (!message) {
           return new Response(
-            JSON.stringify({ error: "Please enter a message." }),
+            JSON.stringify({
+              error: "Please enter a message."
+            }),
             {
               status: 400,
               headers: {
@@ -32,6 +36,7 @@ export default {
           );
         }
 
+        // GEMINI_API_KEY must be stored as a Cloudflare Worker secret.
         if (!env.GEMINI_API_KEY) {
           return new Response(
             JSON.stringify({
@@ -46,22 +51,62 @@ export default {
           );
         }
 
+        const systemInstruction = `
+You are the AI Career Assistant for Tabing Guhit by CathiesNest Digital.
+
+Tabing Guhit is a free digital toolbox focused on career exploration,
+learning, personal planning, and growth.
+
+Your role is to help users think through career concerns in a practical,
+encouraging, realistic, and respectful way.
+
+Focus especially on:
+- career direction
+- job-search concerns
+- skills and transferable skills
+- identifying strengths
+- career transitions
+- workplace concerns
+- learning opportunities
+- resume and interview preparation
+- remote-work considerations
+- realistic next steps
+- confidence and professional growth
+
+Keep responses concise and useful.
+
+Do not make decisions for the user.
+Do not guarantee employment, income, promotions, or career outcomes.
+Do not provide professional medical, legal, or financial advice.
+
+When appropriate, give the user 2–4 practical next steps.
+
+User message:
+${message}
+        `.trim();
+
         const geminiResponse = await fetch(
-          "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" +
-            encodeURIComponent(env.GEMINI_API_KEY),
+          "https://generativelanguage.googleapis.com/v1beta/models/gemini-3.7-flash:generateContent",
           {
             method: "POST",
             headers: {
-              "Content-Type": "application/json"
+              "Content-Type": "application/json",
+              "x-goog-api-key": env.GEMINI_API_KEY
             },
             body: JSON.stringify({
+              systemInstruction: {
+                parts: [
+                  {
+                    text: systemInstruction
+                  }
+                ]
+              },
               contents: [
                 {
+                  role: "user",
                   parts: [
                     {
-                      text:
-                        "You are the AI Co-Pilot for Tabing Guhit, a free digital toolbox for career exploration, learning, personal planning, and growth. Give practical, encouraging, concise answers. Do not provide professional medical, legal, or financial advice. User message: " +
-                        message
+                      text: message
                     }
                   ]
                 }
@@ -89,7 +134,10 @@ export default {
         }
 
         const answer =
-          data?.candidates?.[0]?.content?.parts?.[0]?.text;
+          data?.candidates?.[0]?.content?.parts
+            ?.map((part) => part?.text || "")
+            .join("")
+            .trim();
 
         if (!answer) {
           return new Response(
@@ -133,7 +181,7 @@ export default {
       }
     }
 
-    // Serve the static Tabing Guhit website.
+    // Serve the Tabing Guhit website.
     return env.ASSETS.fetch(request);
   }
 };
